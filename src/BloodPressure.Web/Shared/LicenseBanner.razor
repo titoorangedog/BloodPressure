@@ -1,0 +1,57 @@
+@using BloodPressure.Shared.Contracts
+@inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (!string.IsNullOrWhiteSpace(Message))
+{
+    <div class="alert @AlertClass mb-3" role="alert">
+        @Message
+    </div>
+}
+
+@code {
+    private string Message { get; set; } = string.Empty;
+    private string AlertClass { get; set; } = "alert-secondary";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated != true)
+            {
+                Message = string.Empty;
+                return;
+            }
+
+            var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+            if (license is null)
+            {
+                Message = string.Empty;
+                return;
+            }
+
+            if (license.IsExpired)
+            {
+                Message = $"Licenza: {license.Type} — Scaduta";
+                AlertClass = "alert-danger";
+                return;
+            }
+
+            if (license.DaysRemaining <= 14)
+            {
+                Message = $"Licenza: {license.Type} — Scade tra {license.DaysRemaining} giorni";
+                AlertClass = "alert-warning";
+                return;
+            }
+
+            Message = $"Licenza: {license.Type} — Scade tra {license.DaysRemaining} giorni";
+            AlertClass = "alert-success";
+        }
+        catch
+        {
+            Message = string.Empty;
+        }
+    }
+}
+

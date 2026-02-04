@@ -1,0 +1,227 @@
+@page "/readings/new"
+@page "/readings/{Id:guid}"
+@using BloodPressure.Shared.Contracts
+@using BloodPressure.Shared.Domain
+@inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
+@inject NavigationManager Navigation
+
+<h1>@(IsEdit ? "Modifica rilevazione" : "Nuova rilevazione")</h1>
+
+@if (IsLoading)
+{
+    <p>Caricamento...</p>
+}
+else
+{
+    <EditForm Model="@Model" OnValidSubmit="HandleSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="mb-3">
+            <label class="form-label">Sistolica</label>
+            <InputNumber class="form-control" @bind-Value="Model.Systolic" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Diastolica</label>
+            <InputNumber class="form-control" @bind-Value="Model.Diastolic" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Heart rate</label>
+            <InputNumber class="form-control" @bind-Value="Model.HeartRate" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Peso (kg)</label>
+            <InputNumber class="form-control" @bind-Value="Model.WeightKg" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Timestamp (locale)</label>
+            <InputDate class="form-control" @bind-Value="Model.TimestampLocal" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Posizione</label>
+            <InputSelect class="form-select" @bind-Value="Model.Position">
+                @foreach (var value in Enum.GetValues<Position>())
+                {
+                    <option value="@value">@value</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Note</label>
+            <InputTextArea class="form-control" @bind-Value="Model.Notes" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Farmaco saltato</label>
+            <InputCheckbox class="form-check-input" @bind-Value="Model.MedicationSkipped" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Fascia oraria</label>
+            <InputSelect class="form-select" @bind-Value="Model.TimeSlotOptionId">
+                <option value="">(non selezionato)</option>
+                @foreach (var option in Options.TimeSlotOptions)
+                {
+                    <option value="@option.Id">@option.Name</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Attività sportiva</label>
+            <InputSelect class="form-select" @bind-Value="Model.SportActivityOptionId">
+                <option value="">(non selezionato)</option>
+                @foreach (var option in Options.SportActivityOptions)
+                {
+                    <option value="@option.Id">@option.Name</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sintomi</label>
+            @foreach (var option in Options.SymptomOptions)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" checked="@Model.SymptomOptionIds.Contains(option.Id)"
+                           @onchange="e => ToggleSymptom(option.Id, (bool)e.Value!)" />
+                    <label class="form-check-label">@option.Name</label>
+                </div>
+            }
+        </div>
+
+        <button class="btn btn-primary" type="submit">Salva</button>
+        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel">Annulla</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public Guid? Id { get; set; }
+
+    private bool IsEdit => Id.HasValue;
+    private bool IsLoading { get; set; } = true;
+    private OptionListResponse Options { get; set; } = new OptionListResponse
+    {
+        SymptomOptions = Array.Empty<OptionItemDto>(),
+        TimeSlotOptions = Array.Empty<OptionItemDto>(),
+        SportActivityOptions = Array.Empty<OptionItemDto>()
+    };
+    private ReadingFormModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Options = await ReadApiClient.GetOptionsAsync(CancellationToken.None);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsEdit && Id.HasValue)
+        {
+            var reading = await ReadApiClient.GetReadingAsync(Id.Value, CancellationToken.None);
+            Model = ReadingFormModel.FromResponse(reading);
+        }
+        else
+        {
+            Model = ReadingFormModel.New();
+        }
+
+        IsLoading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        var request = Model.ToCreateRequest();
+        if (IsEdit && Id.HasValue)
+        {
+            await WriteApiClient.UpdateReadingAsync(Id.Value, Model.ToUpdateRequest(), CancellationToken.None);
+        }
+        else
+        {
+            await WriteApiClient.CreateReadingAsync(request, CancellationToken.None);
+        }
+
+        Navigation.NavigateTo("/readings");
+    }
+
+    private void Cancel() => Navigation.NavigateTo("/readings");
+
+    private void ToggleSymptom(int id, bool selected)
+    {
+        if (selected)
+        {
+            Model.SymptomOptionIds.Add(id);
+        }
+        else
+        {
+            Model.SymptomOptionIds.Remove(id);
+        }
+    }
+
+    private sealed class ReadingFormModel
+    {
+        public int Systolic { get; set; } = 120;
+        public int Diastolic { get; set; } = 80;
+        public int? HeartRate { get; set; }
+        public decimal? WeightKg { get; set; }
+        public DateTime TimestampLocal { get; set; } = DateTime.Now;
+        public string? Notes { get; set; }
+        public Position Position { get; set; } = Position.Sitting;
+        public bool MedicationSkipped { get; set; }
+        public int? TimeSlotOptionId { get; set; }
+        public int? SportActivityOptionId { get; set; }
+        public HashSet<int> SymptomOptionIds { get; set; } = new();
+
+        public static ReadingFormModel New() => new();
+
+        public static ReadingFormModel FromResponse(ReadingResponse response)
+        {
+            return new ReadingFormModel
+            {
+                Systolic = response.Systolic,
+                Diastolic = response.Diastolic,
+                HeartRate = response.HeartRate,
+                WeightKg = response.WeightKg,
+                TimestampLocal = response.TimestampUtc.ToLocalTime().DateTime,
+                Notes = response.Notes,
+                Position = response.Position,
+                MedicationSkipped = response.MedicationSkipped,
+                TimeSlotOptionId = response.TimeSlot?.Id,
+                SportActivityOptionId = response.SportActivity?.Id,
+                SymptomOptionIds = response.Symptoms.Select(x => x.Id).ToHashSet()
+            };
+        }
+
+        public ReadingCreateRequest ToCreateRequest()
+        {
+            return new ReadingCreateRequest
+            {
+                Systolic = Systolic,
+                Diastolic = Diastolic,
+                HeartRate = HeartRate,
+                WeightKg = WeightKg,
+                TimestampUtc = new DateTimeOffset(DateTime.SpecifyKind(TimestampLocal, DateTimeKind.Local)).ToUniversalTime(),
+                Notes = Notes,
+                Position = Position,
+                MedicationSkipped = MedicationSkipped,
+                SymptomOptionIds = SymptomOptionIds.ToArray(),
+                TimeSlotOptionId = TimeSlotOptionId,
+                SportActivityOptionId = SportActivityOptionId
+            };
+        }
+
+        public ReadingUpdateRequest ToUpdateRequest()
+        {
+            return new ReadingUpdateRequest
+            {
+                Systolic = Systolic,
+                Diastolic = Diastolic,
+                HeartRate = HeartRate,
+                WeightKg = WeightKg,
+                TimestampUtc = new DateTimeOffset(DateTime.SpecifyKind(TimestampLocal, DateTimeKind.Local)).ToUniversalTime(),
+                Notes = Notes,
+                Position = Position,
+                MedicationSkipped = MedicationSkipped,
+                SymptomOptionIds = SymptomOptionIds.ToArray(),
+                TimeSlotOptionId = TimeSlotOptionId,
+                SportActivityOptionId = SportActivityOptionId
+            };
+        }
+    }
+}

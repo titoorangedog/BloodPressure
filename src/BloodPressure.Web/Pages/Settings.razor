@@ -1,0 +1,197 @@
+@page "/settings"
+@using BloodPressure.Shared.Contracts
+@inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+
+<h1>Impostazioni utente</h1>
+
+@if (IsLoading)
+{
+    <p>Caricamento...</p>
+}
+else
+{
+    <EditForm Model="@Model" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <h3>Dati anagrafici</h3>
+        <div class="mb-3">
+            <label class="form-label">Nome</label>
+            <InputText class="form-control" @bind-Value="Model.FirstName" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Cognome</label>
+            <InputText class="form-control" @bind-Value="Model.LastName" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Genere</label>
+            <InputText class="form-control" @bind-Value="Model.Gender" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Data di nascita</label>
+            <InputDate class="form-control" @bind-Value="Model.DateOfBirth" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Altezza (cm)</label>
+            <InputNumber class="form-control" @bind-Value="Model.HeightCm" />
+        </div>
+
+        <h3>Soglie cliniche</h3>
+        <div class="mb-3">
+            <label class="form-label">Sistolica - VeryLowMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Systolic.VeryLowMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sistolica - LowMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Systolic.LowMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sistolica - NormalMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Systolic.NormalMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Sistolica - HighMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Systolic.HighMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Diastolica - VeryLowMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryLowMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Diastolica - LowMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Diastolic.LowMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Diastolica - NormalMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalMax" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Diastolica - HighMax</label>
+            <InputNumber class="form-control" @bind-Value="Model.Diastolic.HighMax" />
+        </div>
+
+        <h3>Preferenze dashboard</h3>
+        <div class="mb-3">
+            <label class="form-label">Range predefinito (giorni)</label>
+            <InputNumber class="form-control" @bind-Value="Model.DefaultRangeDays" />
+        </div>
+
+        <h3>Preferenze UI</h3>
+        <div class="mb-3">
+            <label class="form-label">Compact Mode</label>
+            <InputCheckbox class="form-check-input" @bind-Value="Model.CompactMode" />
+        </div>
+
+        <button class="btn btn-primary" type="submit">Salva</button>
+    </EditForm>
+}
+
+@code {
+    private bool IsLoading { get; set; } = true;
+    private SettingsFormModel Model { get; set; } = SettingsFormModel.CreateDefault();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
+        Model = SettingsFormModel.FromResponse(settings);
+        IsLoading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        var request = Model.ToRequest();
+        await ReadApiClient.UpdateSettingsAsync(request, CancellationToken.None);
+    }
+
+    private sealed class SettingsFormModel
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Gender { get; set; }
+        public DateOnly? DateOfBirth { get; set; }
+        public decimal? HeightCm { get; set; }
+
+        public ThresholdSetFormModel Systolic { get; set; } = new();
+        public ThresholdSetFormModel Diastolic { get; set; } = new();
+
+        public int DefaultRangeDays { get; set; } = 30;
+        public bool CompactMode { get; set; }
+
+        public static SettingsFormModel CreateDefault()
+        {
+            return new SettingsFormModel
+            {
+                Systolic = new ThresholdSetFormModel { VeryLowMax = 90, LowMax = 100, NormalMax = 130, HighMax = 150 },
+                Diastolic = new ThresholdSetFormModel { VeryLowMax = 60, LowMax = 70, NormalMax = 85, HighMax = 95 },
+                DefaultRangeDays = 30,
+                CompactMode = false
+            };
+        }
+
+        public static SettingsFormModel FromResponse(UserSettingsResponse response)
+        {
+            return new SettingsFormModel
+            {
+                FirstName = response.FirstName,
+                LastName = response.LastName,
+                Gender = response.Gender,
+                DateOfBirth = response.DateOfBirth,
+                HeightCm = response.HeightCm,
+                Systolic = ThresholdSetFormModel.FromDto(response.Thresholds.Systolic),
+                Diastolic = ThresholdSetFormModel.FromDto(response.Thresholds.Diastolic),
+                DefaultRangeDays = response.DashboardPreferences.DefaultRangeDays,
+                CompactMode = response.UiPreferences.CompactMode
+            };
+        }
+
+        public UserSettingsUpdateRequest ToRequest()
+        {
+            return new UserSettingsUpdateRequest
+            {
+                FirstName = FirstName,
+                LastName = LastName,
+                Gender = Gender,
+                DateOfBirth = DateOfBirth,
+                HeightCm = HeightCm,
+                Thresholds = new ClinicalThresholdsDto
+                {
+                    Systolic = Systolic.ToDto(),
+                    Diastolic = Diastolic.ToDto()
+                },
+                DashboardPreferences = new DashboardPreferencesDto { DefaultRangeDays = DefaultRangeDays },
+                DefaultSelections = new DefaultSelectionsDto(),
+                UiPreferences = new UiPreferencesDto { CompactMode = CompactMode }
+            };
+        }
+    }
+
+    private sealed class ThresholdSetFormModel
+    {
+        public int VeryLowMax { get; set; }
+        public int LowMax { get; set; }
+        public int NormalMax { get; set; }
+        public int HighMax { get; set; }
+
+        public static ThresholdSetFormModel FromDto(ThresholdSetDto dto)
+        {
+            return new ThresholdSetFormModel
+            {
+                VeryLowMax = dto.VeryLowMax,
+                LowMax = dto.LowMax,
+                NormalMax = dto.NormalMax,
+                HighMax = dto.HighMax
+            };
+        }
+
+        public ThresholdSetDto ToDto()
+        {
+            return new ThresholdSetDto
+            {
+                VeryLowMax = VeryLowMax,
+                LowMax = LowMax,
+                NormalMax = NormalMax,
+                HighMax = HighMax
+            };
+        }
+    }
+}

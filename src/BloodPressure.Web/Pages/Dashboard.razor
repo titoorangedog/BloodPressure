@@ -1,0 +1,109 @@
+@page "/dashboard"
+@using BloodPressure.Shared.Contracts
+@inject BloodPressure.Web.Services.StatsApiClient StatsApiClient
+@inject IJSRuntime Js
+
+<h1>Dashboard</h1>
+
+@if (IsLoading)
+{
+    <p>Caricamento...</p>
+}
+else if (!string.IsNullOrWhiteSpace(Error))
+{
+    <div class="alert alert-danger">@Error</div>
+}
+else
+{
+    <div class="mb-4">
+        <canvas id="bpChart"></canvas>
+    </div>
+    <div class="mb-4">
+        <canvas id="weightChart"></canvas>
+    </div>
+    <div class="mb-4">
+        <canvas id="hrChart"></canvas>
+    </div>
+
+    <h3>KPI</h3>
+    <ul>
+        <li>Media sistolica: @Stats!.Kpis.AverageSystolic</li>
+        <li>Media diastolica: @Stats!.Kpis.AverageDiastolic</li>
+        <li>Min/Max sistolica: @Stats!.Kpis.MinSystolic / @Stats!.Kpis.MaxSystolic</li>
+        <li>Min/Max diastolica: @Stats!.Kpis.MinDiastolic / @Stats!.Kpis.MaxDiastolic</li>
+    </ul>
+}
+
+@code {
+    private bool IsLoading { get; set; } = true;
+    private string Error { get; set; } = string.Empty;
+    private DashboardStatsResponse? Stats { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var request = new StatsFilterRequest
+            {
+                FromDate = today.AddDays(-30),
+                ToDate = today
+            };
+            Stats = await StatsApiClient.GetDashboardAsync(request, CancellationToken.None);
+        }
+        catch
+        {
+            Error = "Impossibile caricare la dashboard. Verifica la licenza o riprova.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || Stats is null)
+        {
+            return;
+        }
+
+        var labels = Stats.BloodPressureTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToArray();
+        var systolic = Stats.BloodPressureTrend.Select(x => x.Systolic).ToArray();
+        var diastolic = Stats.BloodPressureTrend.Select(x => x.Diastolic).ToArray();
+
+        await Js.InvokeVoidAsync("bpCharts.renderLineChart",
+            "bpChart",
+            labels,
+            new object[]
+            {
+                new { label = "Sistolica", data = systolic, borderColor = "red" },
+                new { label = "Diastolica", data = diastolic, borderColor = "orange" }
+            },
+            "Pressione nel tempo");
+
+        var weightLabels = Stats.WeightTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToArray();
+        var weightData = Stats.WeightTrend.Select(x => x.Value).ToArray();
+
+        await Js.InvokeVoidAsync("bpCharts.renderLineChart",
+            "weightChart",
+            weightLabels,
+            new object[]
+            {
+                new { label = "Peso", data = weightData, borderColor = "blue" }
+            },
+            "Trend peso");
+
+        var hrLabels = Stats.HeartRateTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToArray();
+        var hrData = Stats.HeartRateTrend.Select(x => x.Value).ToArray();
+
+        await Js.InvokeVoidAsync("bpCharts.renderLineChart",
+            "hrChart",
+            hrLabels,
+            new object[]
+            {
+                new { label = "Heart Rate", data = hrData, borderColor = "green" }
+            },
+            "Trend battiti");
+    }
+}

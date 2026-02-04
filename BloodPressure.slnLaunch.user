@@ -1,0 +1,31 @@
+[
+  {
+    "Name": "Multiple",
+    "Projects": [
+      {
+        "Path": "src\\BloodPressure.AuthService\\BloodPressure.AuthService.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\BloodPressure.ReadService\\BloodPressure.ReadService.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\BloodPressure.StatsService\\BloodPressure.StatsService.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\BloodPressure.WriteService\\BloodPressure.WriteService.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Path": "src\\BloodPressure.Web\\BloodPressure.Web.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

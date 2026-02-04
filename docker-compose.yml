@@ -1,0 +1,173 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=${SQL_SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    networks:
+      - bpnet
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  authservice:
+    build:
+      context: .
+      dockerfile: src/BloodPressure.AuthService/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=BloodPressure;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Issuer=BloodPressure
+      - Jwt__Audience=BloodPressure.Client
+      - Jwt__SigningKey=${JWT_SIGNING_KEY}
+      - Jwt__AccessTokenMinutes=60
+      - GoogleOAuth__ClientId=${GOOGLE_CLIENT_ID}
+      - GoogleOAuth__ClientSecret=${GOOGLE_CLIENT_SECRET}
+      - GoogleOAuth__CallbackUrl=${GOOGLE_CALLBACK_URL}
+      - WebClient__BaseUrl=${WEBCLIENT_BASE_URL}
+      - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
+      - ClinicalThresholds__Systolic__VeryLowMax=90
+      - ClinicalThresholds__Systolic__LowMax=100
+      - ClinicalThresholds__Systolic__NormalMax=130
+      - ClinicalThresholds__Systolic__HighMax=150
+      - ClinicalThresholds__Diastolic__VeryLowMax=60
+      - ClinicalThresholds__Diastolic__LowMax=70
+      - ClinicalThresholds__Diastolic__NormalMax=85
+      - ClinicalThresholds__Diastolic__HighMax=95
+      - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
+    ports:
+      - "7001:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - bpnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  writeservice:
+    build:
+      context: .
+      dockerfile: src/BloodPressure.WriteService/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=BloodPressure;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Issuer=BloodPressure
+      - Jwt__Audience=BloodPressure.Client
+      - Jwt__SigningKey=${JWT_SIGNING_KEY}
+      - Jwt__AccessTokenMinutes=60
+      - ClinicalThresholds__Systolic__VeryLowMax=90
+      - ClinicalThresholds__Systolic__LowMax=100
+      - ClinicalThresholds__Systolic__NormalMax=130
+      - ClinicalThresholds__Systolic__HighMax=150
+      - ClinicalThresholds__Diastolic__VeryLowMax=60
+      - ClinicalThresholds__Diastolic__LowMax=70
+      - ClinicalThresholds__Diastolic__NormalMax=85
+      - ClinicalThresholds__Diastolic__HighMax=95
+      - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
+    ports:
+      - "7002:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - bpnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  readservice:
+    build:
+      context: .
+      dockerfile: src/BloodPressure.ReadService/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=BloodPressure;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Issuer=BloodPressure
+      - Jwt__Audience=BloodPressure.Client
+      - Jwt__SigningKey=${JWT_SIGNING_KEY}
+      - Jwt__AccessTokenMinutes=60
+      - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
+      - ClinicalThresholds__Systolic__VeryLowMax=90
+      - ClinicalThresholds__Systolic__LowMax=100
+      - ClinicalThresholds__Systolic__NormalMax=130
+      - ClinicalThresholds__Systolic__HighMax=150
+      - ClinicalThresholds__Diastolic__VeryLowMax=60
+      - ClinicalThresholds__Diastolic__LowMax=70
+      - ClinicalThresholds__Diastolic__NormalMax=85
+      - ClinicalThresholds__Diastolic__HighMax=95
+    ports:
+      - "7003:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - bpnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  statsservice:
+    build:
+      context: .
+      dockerfile: src/BloodPressure.StatsService/Dockerfile
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=BloodPressure;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      - Jwt__Issuer=BloodPressure
+      - Jwt__Audience=BloodPressure.Client
+      - Jwt__SigningKey=${JWT_SIGNING_KEY}
+      - Jwt__AccessTokenMinutes=60
+    ports:
+      - "7004:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - bpnet
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: src/BloodPressure.Web/Dockerfile
+    ports:
+      - "5172:80"
+    depends_on:
+      authservice:
+        condition: service_healthy
+      readservice:
+        condition: service_healthy
+      writeservice:
+        condition: service_healthy
+      statsservice:
+        condition: service_healthy
+    networks:
+      - bpnet
+
+networks:
+  bpnet:
+    driver: bridge

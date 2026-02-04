@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/BloodPressure.AuthService/BloodPressure.AuthService.csproj" />
+    <Project Path="src/BloodPressure.Persistence/BloodPressure.Persistence.csproj" />
+    <Project Path="src/BloodPressure.ReadService/BloodPressure.ReadService.csproj" />
+    <Project Path="src/BloodPressure.Shared/BloodPressure.Shared.csproj" />
+    <Project Path="src/BloodPressure.StatsService/BloodPressure.StatsService.csproj" />
+    <Project Path="src/BloodPressure.Web/BloodPressure.Web.csproj" />
+    <Project Path="src/BloodPressure.WriteService/BloodPressure.WriteService.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/BloodPressure.Tests/BloodPressure.Tests.csproj" />
+  </Folder>
+</Solution>

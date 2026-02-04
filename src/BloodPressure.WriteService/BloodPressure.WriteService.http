@@ -1,0 +1,6 @@
+@BloodPressure.WriteService_HostAddress = http://localhost:5284
+
+GET {{BloodPressure.WriteService_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

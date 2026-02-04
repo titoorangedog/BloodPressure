@@ -1,0 +1,52 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@inject BloodPressure.Web.Services.AuthService AuthService
+@inject NavigationManager Navigation
+
+<h1>Login</h1>
+
+@if (ShowExpiredMessage)
+{
+    <div class="alert alert-warning" role="alert">
+        Sessione scaduta, effettua di nuovo l’accesso.
+    </div>
+}
+
+<button class="btn btn-primary" @onclick="StartLogin">Accedi con Google</button>
+
+@code {
+    private bool ShowExpiredMessage { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = ParseQuery(uri.Query);
+        ShowExpiredMessage = query.TryGetValue("reason", out var value) &&
+            string.Equals(value, "expired", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Dictionary<string, string> ParseQuery(string query)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return result;
+        }
+
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kvp = part.Split('=', 2);
+            if (kvp.Length == 2)
+            {
+                result[Uri.UnescapeDataString(kvp[0])] = Uri.UnescapeDataString(kvp[1]);
+            }
+        }
+
+        return result;
+    }
+
+    private async Task StartLogin()
+    {
+        await AuthService.StartLoginAsync(CancellationToken.None);
+    }
+}

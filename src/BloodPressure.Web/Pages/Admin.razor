@@ -1,0 +1,137 @@
+@page "/admin"
+@using BloodPressure.Shared.Contracts
+@using BloodPressure.Shared.Domain
+@inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+
+<h1>Admin</h1>
+
+@if (IsLoading)
+{
+    <p>Caricamento...</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Email</th>
+            <th>Ruolo</th>
+            <th>Licenza</th>
+            <th>Scadenza</th>
+            <th>Azioni</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var user in Users)
+        {
+            <tr>
+                <td>@user.Email</td>
+                <td>
+                    <InputSelect class="form-select" @bind-Value="user.Role">
+                        @foreach (var role in Enum.GetValues<UserRole>())
+                        {
+                            <option value="@role">@role</option>
+                        }
+                    </InputSelect>
+                </td>
+                <td>@user.ActiveLicense</td>
+                <td>@user.LicenseEndDateUtc.ToLocalTime():d</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SaveRole(user)">Salva ruolo</button>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenLicense(user)">Licenza</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@if (ShowLicenseEditor && SelectedUser is not null)
+{
+    <div class="card p-3">
+        <h3>Assegna licenza a @SelectedUser.Email</h3>
+        <div class="mb-3">
+            <label class="form-label">Tipo</label>
+            <InputSelect class="form-select" @bind-Value="LicenseType">
+                @foreach (var type in Enum.GetValues<LicenseType>())
+                {
+                    <option value="@type">@type</option>
+                }
+            </InputSelect>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Inizio</label>
+            <InputDate class="form-control" @bind-Value="LicenseStart" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Fine</label>
+            <InputDate class="form-control" @bind-Value="LicenseEnd" />
+        </div>
+        <button class="btn btn-primary" @onclick="AssignLicense">Assegna</button>
+    </div>
+}
+
+@code {
+    private bool IsLoading { get; set; } = true;
+    private List<AdminUserModel> Users { get; set; } = new();
+
+    private bool ShowLicenseEditor { get; set; }
+    private AdminUserModel? SelectedUser { get; set; }
+    private LicenseType LicenseType { get; set; } = LicenseType.Advanced;
+    private DateTime LicenseStart { get; set; } = DateTime.Today;
+    private DateTime LicenseEnd { get; set; } = DateTime.Today.AddDays(30);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var users = await ReadApiClient.GetUsersAsync(CancellationToken.None);
+        Users = users.Select(AdminUserModel.FromDto).ToList();
+        IsLoading = false;
+    }
+
+    private async Task SaveRole(AdminUserModel user)
+    {
+        await ReadApiClient.AssignRoleAsync(user.Id, new AssignRoleRequest { Role = user.Role }, CancellationToken.None);
+    }
+
+    private void OpenLicense(AdminUserModel user)
+    {
+        SelectedUser = user;
+        ShowLicenseEditor = true;
+    }
+
+    private async Task AssignLicense()
+    {
+        if (SelectedUser is null)
+        {
+            return;
+        }
+
+        await ReadApiClient.AssignLicenseAsync(SelectedUser.Id, new AssignLicenseRequest
+        {
+            Type = LicenseType,
+            StartDateUtc = new DateTimeOffset(DateTime.SpecifyKind(LicenseStart, DateTimeKind.Local)).ToUniversalTime(),
+            EndDateUtc = new DateTimeOffset(DateTime.SpecifyKind(LicenseEnd, DateTimeKind.Local)).ToUniversalTime()
+        }, CancellationToken.None);
+    }
+
+    private sealed class AdminUserModel
+    {
+        public Guid Id { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public UserRole Role { get; set; }
+        public LicenseType ActiveLicense { get; set; }
+        public DateTimeOffset LicenseEndDateUtc { get; set; }
+
+        public static AdminUserModel FromDto(UserSummaryDto dto)
+        {
+            return new AdminUserModel
+            {
+                Id = dto.Id,
+                Email = dto.Email,
+                Role = dto.Role,
+                ActiveLicense = dto.ActiveLicense,
+                LicenseEndDateUtc = dto.LicenseEndDateUtc
+            };
+        }
+    }
+}

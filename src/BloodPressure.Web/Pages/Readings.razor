@@ -1,0 +1,79 @@
+@page "/readings"
+@using BloodPressure.Shared.Contracts
+@inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
+@inject NavigationManager Navigation
+
+<h1>Rilevazioni</h1>
+
+<button class="btn btn-primary mb-3" @onclick="CreateNew">Nuova rilevazione</button>
+
+@if (IsLoading)
+{
+    <p>Caricamento...</p>
+}
+else if (ReadingItems.Count == 0)
+{
+    <p>Nessuna rilevazione trovata.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Data</th>
+            <th>Sistolica</th>
+            <th>Diastolica</th>
+            <th>FC</th>
+            <th>Peso</th>
+            <th>Severità</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var reading in ReadingItems)
+        {
+            <tr>
+                <td>@reading.TimestampUtc.ToLocalTime():g</td>
+                <td>@reading.Systolic</td>
+                <td>@reading.Diastolic</td>
+                <td>@reading.HeartRate</td>
+                <td>@reading.WeightKg</td>
+                <td>@reading.Severity</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => Edit(reading.Id)">Modifica</button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(reading.Id)">Elimina</button>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ReadingResponse> ReadingItems { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        IsLoading = true;
+        var results = await ReadApiClient.GetReadingsAsync(null, null, CancellationToken.None);
+        ReadingItems = results.ToList();
+        IsLoading = false;
+    }
+
+    private void CreateNew() => Navigation.NavigateTo("/readings/new");
+
+    private void Edit(Guid id) => Navigation.NavigateTo($"/readings/{id}");
+
+    private async Task Delete(Guid id)
+    {
+        await WriteApiClient.DeleteReadingAsync(id, CancellationToken.None);
+        await LoadAsync();
+    }
+}
