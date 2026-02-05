@@ -1,6 +1,8 @@
 @page "/dashboard"
 @using BloodPressure.Shared.Contracts
+@using BloodPressure.Shared.Domain
 @inject BloodPressure.Web.Services.StatsApiClient StatsApiClient
+@inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject IJSRuntime Js
 
 <h1>Dashboard</h1>
@@ -15,13 +17,17 @@ else if (!string.IsNullOrWhiteSpace(Error))
 }
 else
 {
-    <div class="mb-4">
+    @if (!string.IsNullOrWhiteSpace(Notice))
+    {
+        <div class="alert alert-info">@Notice</div>
+    }
+    <div class="mb-4 chart-container">
         <canvas id="bpChart"></canvas>
     </div>
-    <div class="mb-4">
+    <div class="mb-4 chart-container">
         <canvas id="weightChart"></canvas>
     </div>
-    <div class="mb-4">
+    <div class="mb-4 chart-container">
         <canvas id="hrChart"></canvas>
     </div>
 
@@ -37,13 +43,20 @@ else
 @code {
     private bool IsLoading { get; set; } = true;
     private string Error { get; set; } = string.Empty;
+    private string Notice { get; set; } = string.Empty;
     private DashboardStatsResponse? Stats { get; set; }
+    private bool chartsRendered;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+            if (license?.Type == LicenseType.Free)
+            {
+                Notice = "Licenza Free: le statistiche sono limitate agli ultimi 30 giorni.";
+            }
             var request = new StatsFilterRequest
             {
                 FromDate = today.AddDays(-30),
@@ -63,7 +76,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || Stats is null)
+        if (Stats is null || chartsRendered)
         {
             return;
         }
@@ -105,5 +118,7 @@ else
                 new { label = "Heart Rate", data = hrData, borderColor = "green" }
             },
             "Trend battiti");
+
+        chartsRendered = true;
     }
 }

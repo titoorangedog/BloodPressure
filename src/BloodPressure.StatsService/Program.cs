@@ -90,13 +90,17 @@ stats.MapPost("/dashboard", async (
         return Results.Forbid();
     }
 
+    var to = request.ToDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
+    var from = request.FromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
     if (activeLicense.Type == LicenseType.Free)
     {
-        return Results.Forbid();
+        var maxLookback = to.AddDays(-30);
+        if (from < maxLookback)
+        {
+            from = maxLookback;
+        }
     }
-
-    var from = request.FromDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-    var to = request.ToDate.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
     var readings = await db.Readings
         .AsNoTracking()
