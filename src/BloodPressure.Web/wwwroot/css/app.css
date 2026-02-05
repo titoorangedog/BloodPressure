@@ -113,3 +113,14 @@ code {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+.chart-container {
+    position: relative;
+    height: 280px;
+}
+
+@media (max-width: 640px) {
+    .chart-container {
+        height: 220px;
+    }
+}

@@ -18,6 +18,7 @@ window.bpCharts.renderLineChart = (canvasId, labels, datasets, title) => {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: { position: 'top' },
                 title: { display: !!title, text: title }

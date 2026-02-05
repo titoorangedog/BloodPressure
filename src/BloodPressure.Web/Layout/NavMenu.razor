@@ -1,3 +1,6 @@
+@implements IDisposable
+@inject AuthenticationStateProvider AuthStateProvider
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">BloodPressure</a>
@@ -9,11 +12,6 @@
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                Login
-            </NavLink>
-        </div>
         <AuthorizeView>
             <Authorized>
                 <div class="nav-item px-3">
@@ -28,7 +26,7 @@
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="dashboard">
-                        Dashboard
+                        Grafici
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
@@ -42,17 +40,48 @@
                     </NavLink>
                 </div>
             </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
         </AuthorizeView>
     </nav>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
+    private bool isSubscribed;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override void OnInitialized()
+    {
+        if (!isSubscribed)
+        {
+            AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            isSubscribed = true;
+        }
+    }
+
+    // Fix: Change signature to match expected delegate (void return type)
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> _)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (isSubscribed)
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
     }
 }
