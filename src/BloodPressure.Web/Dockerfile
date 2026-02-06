@@ -7,4 +7,5 @@ RUN dotnet publish src/BloodPressure.Web/BloodPressure.Web.csproj -c Release -o 
 FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 COPY --from=build /app/publish/wwwroot .
+COPY src/BloodPressure.Web/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

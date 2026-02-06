@@ -1,13 +1,20 @@
 @page "/admin"
 @using BloodPressure.Shared.Contracts
 @using BloodPressure.Shared.Domain
+@using BloodPressure.Shared.Auth
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.ToastService ToastService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <h1>Admin</h1>
 
 @if (IsLoading)
 {
     <p>Caricamento...</p>
+}
+else if (!string.IsNullOrWhiteSpace(AccessError))
+{
+    <div class="alert alert-warning">@AccessError</div>
 }
 else
 {
@@ -35,10 +42,11 @@ else
                     </InputSelect>
                 </td>
                 <td>@user.ActiveLicense</td>
-                <td>@user.LicenseEndDateUtc.ToLocalTime():d</td>
+                <td>@FormatLicenseEndDate(user.ActiveLicense, user.LicenseEndDateUtc)</td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SaveRole(user)">Salva ruolo</button>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenLicense(user)">Licenza</button>
+                    <button class="btn btn-sm btn-outline-info ms-2" @onclick="() => ShowLicenses(user)">Storico licenze</button>
                 </td>
             </tr>
         }
@@ -71,26 +79,133 @@ else
     </div>
 }
 
+@if (ShowLicenseList && SelectedUserDetails is not null)
+{
+    <div class="card p-3 mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <h3 class="mb-0">Licenze di @SelectedUserDetails.Email</h3>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="CloseLicenseList">Chiudi</button>
+        </div>
+        <div class="mt-3">
+            @if (SelectedUserDetails.Licenses.Count == 0)
+            {
+                <p>Nessuna licenza trovata.</p>
+            }
+            else
+            {
+                <table class="table table-sm table-striped">
+                    <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Inizio</th>
+                        <th>Fine</th>
+                        <th>Attiva</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var license in SelectedUserDetails.Licenses)
+                    {
+                        <tr>
+                            @if (IsEditingActiveLicense && EditingLicenseId == license.Id)
+                            {
+                                <td>
+                                    <InputSelect class="form-select form-select-sm" @bind-Value="EditLicenseType">
+                                        @foreach (var type in Enum.GetValues<LicenseType>())
+                                        {
+                                            <option value="@type">@type</option>
+                                        }
+                                    </InputSelect>
+                                </td>
+                                <td>
+                                    <InputDate class="form-control form-control-sm" @bind-Value="EditLicenseStart" />
+                                </td>
+                                <td>
+                                    <InputDate class="form-control form-control-sm" @bind-Value="EditLicenseEnd" />
+                                </td>
+                                <td>@(license.IsActive ? "Sì" : "No")</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-primary me-2" @onclick="() => SaveActiveLicense(license)">Salva</button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditActiveLicense">Annulla</button>
+                                </td>
+                            }
+                            else
+                            {
+                                <td>@license.Type</td>
+                                <td>@license.StartDateUtc.ToLocalTime():g</td>
+                                <td>@FormatLicenseEndDateTime(license.Type, license.EndDateUtc)</td>
+                                <td>@(license.IsActive ? "Sì" : "No")</td>
+                                <td class="text-end">
+                                    @if (license.IsActive)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditActiveLicense(license)">Modifica</button>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
+
 @code {
     private bool IsLoading { get; set; } = true;
+    private string AccessError { get; set; } = string.Empty;
     private List<AdminUserModel> Users { get; set; } = new();
 
     private bool ShowLicenseEditor { get; set; }
     private AdminUserModel? SelectedUser { get; set; }
+    private bool ShowLicenseList { get; set; }
+    private UserDetailDto? SelectedUserDetails { get; set; }
+    private bool IsEditingActiveLicense { get; set; }
+    private Guid? EditingLicenseId { get; set; }
+    private LicenseType EditLicenseType { get; set; } = LicenseType.Free;
+    private DateTime EditLicenseStart { get; set; } = DateTime.Today;
+    private DateTime EditLicenseEnd { get; set; } = DateTime.Today.AddDays(30);
     private LicenseType LicenseType { get; set; } = LicenseType.Advanced;
     private DateTime LicenseStart { get; set; } = DateTime.Today;
     private DateTime LicenseEnd { get; set; } = DateTime.Today.AddDays(30);
 
     protected override async Task OnInitializedAsync()
     {
-        var users = await ReadApiClient.GetUsersAsync(CancellationToken.None);
-        Users = users.Select(AdminUserModel.FromDto).ToList();
-        IsLoading = false;
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.GetUserRole() != UserRole.Admin)
+        {
+            AccessError = "Accesso riservato agli amministratori.";
+            IsLoading = false;
+            return;
+        }
+
+        try
+        {
+            var users = await ReadApiClient.GetUsersAsync(CancellationToken.None);
+            Users = users.Select(AdminUserModel.FromDto).ToList();
+        }
+        catch (Exception ex)
+        {
+            AccessError = $"Errore nel caricamento admin: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task SaveRole(AdminUserModel user)
     {
-        await ReadApiClient.AssignRoleAsync(user.Id, new AssignRoleRequest { Role = user.Role }, CancellationToken.None);
+        try
+        {
+            await ReadApiClient.AssignRoleAsync(user.Id, new AssignRoleRequest { Role = user.Role }, CancellationToken.None);
+            ToastService.Show("Salvataggio completato", ToastLevel.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
     }
 
     private void OpenLicense(AdminUserModel user)
@@ -99,6 +214,77 @@ else
         ShowLicenseEditor = true;
     }
 
+    private async Task ShowLicenses(AdminUserModel user)
+    {
+        try
+        {
+            SelectedUserDetails = await ReadApiClient.GetUserAsync(user.Id, CancellationToken.None);
+            ShowLicenseList = true;
+            IsEditingActiveLicense = false;
+            EditingLicenseId = null;
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore nel caricamento licenze", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
+    }
+
+    private void CloseLicenseList()
+    {
+        ShowLicenseList = false;
+        SelectedUserDetails = null;
+        IsEditingActiveLicense = false;
+        EditingLicenseId = null;
+    }
+
+    private void EditActiveLicense(LicenseDto license)
+    {
+        if (!license.IsActive)
+        {
+            return;
+        }
+
+        IsEditingActiveLicense = true;
+        EditingLicenseId = license.Id;
+        EditLicenseType = license.Type;
+        EditLicenseStart = license.StartDateUtc.ToLocalTime().DateTime;
+        EditLicenseEnd = license.EndDateUtc.ToLocalTime().DateTime;
+    }
+
+    private void CancelEditActiveLicense()
+    {
+        IsEditingActiveLicense = false;
+        EditingLicenseId = null;
+    }
+
+    private async Task SaveActiveLicense(LicenseDto license)
+    {
+        if (SelectedUserDetails is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await ReadApiClient.UpdateLicenseAsync(SelectedUserDetails.Id, license.Id, new LicenseUpdateRequest
+            {
+                Type = EditLicenseType,
+                StartDateUtc = new DateTimeOffset(DateTime.SpecifyKind(EditLicenseStart, DateTimeKind.Local)).ToUniversalTime(),
+                EndDateUtc = new DateTimeOffset(DateTime.SpecifyKind(EditLicenseEnd, DateTimeKind.Local)).ToUniversalTime()
+            }, CancellationToken.None);
+
+            ToastService.Show("Salvataggio completato", ToastLevel.Success);
+            SelectedUserDetails = await ReadApiClient.GetUserAsync(SelectedUserDetails.Id, CancellationToken.None);
+            IsEditingActiveLicense = false;
+            EditingLicenseId = null;
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
+    }
     private async Task AssignLicense()
     {
         if (SelectedUser is null)
@@ -106,12 +292,43 @@ else
             return;
         }
 
-        await ReadApiClient.AssignLicenseAsync(SelectedUser.Id, new AssignLicenseRequest
+        try
         {
-            Type = LicenseType,
-            StartDateUtc = new DateTimeOffset(DateTime.SpecifyKind(LicenseStart, DateTimeKind.Local)).ToUniversalTime(),
-            EndDateUtc = new DateTimeOffset(DateTime.SpecifyKind(LicenseEnd, DateTimeKind.Local)).ToUniversalTime()
-        }, CancellationToken.None);
+            await ReadApiClient.AssignLicenseAsync(SelectedUser.Id, new AssignLicenseRequest
+            {
+                Type = LicenseType,
+                StartDateUtc = new DateTimeOffset(DateTime.SpecifyKind(LicenseStart, DateTimeKind.Local)).ToUniversalTime(),
+                EndDateUtc = new DateTimeOffset(DateTime.SpecifyKind(LicenseEnd, DateTimeKind.Local)).ToUniversalTime()
+            }, CancellationToken.None);
+            await ReloadUsersAsync();
+            ToastService.Show("Salvataggio completato", ToastLevel.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
+    }
+
+    private async Task ReloadUsersAsync()
+    {
+        var users = await ReadApiClient.GetUsersAsync(CancellationToken.None);
+        Users = users.Select(AdminUserModel.FromDto).ToList();
+
+        if (SelectedUser is not null)
+        {
+            SelectedUser = Users.FirstOrDefault(x => x.Id == SelectedUser.Id);
+        }
+    }
+
+    private static string FormatLicenseEndDate(LicenseType type, DateTimeOffset endUtc)
+    {
+        return type == LicenseType.Premium ? "Illimitata" : endUtc.ToLocalTime().ToString("d");
+    }
+
+    private static string FormatLicenseEndDateTime(LicenseType type, DateTimeOffset endUtc)
+    {
+        return type == LicenseType.Premium ? "Illimitata" : endUtc.ToLocalTime().ToString("g");
     }
 
     private sealed class AdminUserModel

@@ -1,6 +1,7 @@
 @page "/settings"
 @using BloodPressure.Shared.Contracts
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.ToastService ToastService
 
 <h1>Impostazioni utente</h1>
 
@@ -99,8 +100,17 @@ else
 
     private async Task SaveAsync()
     {
-        var request = Model.ToRequest();
-        await ReadApiClient.UpdateSettingsAsync(request, CancellationToken.None);
+        try
+        {
+            var request = Model.ToRequest();
+            await ReadApiClient.UpdateSettingsAsync(request, CancellationToken.None);
+            ToastService.Show("Salvataggio completato", ToastLevel.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
     }
 
     private sealed class SettingsFormModel

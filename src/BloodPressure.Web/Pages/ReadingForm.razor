@@ -4,6 +4,7 @@
 @using BloodPressure.Shared.Domain
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
+@inject BloodPressure.Web.Services.ToastService ToastService
 @inject NavigationManager Navigation
 
 <h1>@(IsEdit ? "Modifica rilevazione" : "Nuova rilevazione")</h1>
@@ -127,17 +128,26 @@ else
 
     private async Task HandleSubmit()
     {
-        var request = Model.ToCreateRequest();
-        if (IsEdit && Id.HasValue)
+        try
         {
-            await WriteApiClient.UpdateReadingAsync(Id.Value, Model.ToUpdateRequest(), CancellationToken.None);
-        }
-        else
-        {
-            await WriteApiClient.CreateReadingAsync(request, CancellationToken.None);
-        }
+            var request = Model.ToCreateRequest();
+            if (IsEdit && Id.HasValue)
+            {
+                await WriteApiClient.UpdateReadingAsync(Id.Value, Model.ToUpdateRequest(), CancellationToken.None);
+            }
+            else
+            {
+                await WriteApiClient.CreateReadingAsync(request, CancellationToken.None);
+            }
 
-        Navigation.NavigateTo("/readings");
+            ToastService.Show("Salvataggio completato", ToastLevel.Success);
+            Navigation.NavigateTo("/readings");
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
     }
 
     private void Cancel() => Navigation.NavigateTo("/readings");

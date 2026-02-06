@@ -28,6 +28,7 @@ builder.Services.AddDbContext<BloodPressureDbContext>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -85,7 +86,7 @@ stats.MapPost("/dashboard", async (
         .OrderByDescending(x => x.EndDateUtc)
         .FirstOrDefaultAsync(cancellationToken);
 
-    if (activeLicense is null || activeLicense.EndDateUtc <= DateTimeOffset.UtcNow)
+    if (activeLicense is null || LicenseCalculator.IsExpired(activeLicense.Type, DateTimeOffset.UtcNow, activeLicense.EndDateUtc))
     {
         return Results.Forbid();
     }

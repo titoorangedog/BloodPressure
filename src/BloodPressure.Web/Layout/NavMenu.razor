@@ -1,5 +1,10 @@
+@using System.Security.Claims
+@using BloodPressure.Shared.Auth
+@using BloodPressure.Shared.Domain
 @implements IDisposable
 @inject AuthenticationStateProvider AuthStateProvider
+@inject BloodPressure.Web.Services.AuthService AuthService
+@using BloodPressure.Web.Shared
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -13,7 +18,13 @@
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
         <AuthorizeView>
-            <Authorized>
+            <Authorized Context="authState">
+                <div class="nav-item px-3">
+                    <div class="nav-link">
+                        <div>@GetEmail(authState.User)</div>
+                        <small>Ruolo: @GetRole(authState.User)</small>
+                    </div>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="readings">
                         Rilevazioni
@@ -34,21 +45,32 @@
                         Impostazioni
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin">
-                        Admin
-                    </NavLink>
-                </div>
+                @if (IsAdmin(authState.User))
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin">
+                            Admin
+                        </NavLink>
+                    </div>
+                }
             </Authorized>
-            <NotAuthorized>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="login">
-                        Login
-                    </NavLink>
-                </div>
-            </NotAuthorized>
         </AuthorizeView>
     </nav>
+    <div class="nav-item px-3 mt-3">
+        <LicenseBanner />
+    </div>
+    <div class="nav-item px-3 mt-3">
+        <AuthorizeView>
+            <Authorized>
+                <button class="btn btn-outline-primary w-100" @onclick="AuthService.LogoutAsync">Logout</button>
+            </Authorized>
+            <NotAuthorized>
+                <NavLink class="btn btn-outline-primary w-100" href="login">
+                    Login
+                </NavLink>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
 </div>
 
 @code {
@@ -76,6 +98,20 @@
     {
         InvokeAsync(StateHasChanged);
     }
+
+    private static bool IsAdmin(ClaimsPrincipal user)
+        => user.GetUserRole() == UserRole.Admin;
+
+    private static string GetEmail(ClaimsPrincipal user)
+    {
+        return user.FindFirst(ClaimTypes.Email)?.Value
+            ?? user.FindFirst("email")?.Value
+            ?? user.Identity?.Name
+            ?? "Utente";
+    }
+
+    private static string GetRole(ClaimsPrincipal user)
+        => user.GetUserRole().ToString();
 
     public void Dispose()
     {
