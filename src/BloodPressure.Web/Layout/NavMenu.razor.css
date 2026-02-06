@@ -65,6 +65,22 @@
     color: white;
 }
 
+.nav-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.nav-items {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+.nav-footer {
+    flex: 0 0 auto;
+    padding-bottom: 1rem;
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;
@@ -78,6 +94,6 @@
     .nav-scrollable {
         /* Allow sidebar to scroll for tall menus */
         height: calc(100vh - 3.5rem);
-        overflow-y: auto;
+        overflow: hidden;
     }
 }
