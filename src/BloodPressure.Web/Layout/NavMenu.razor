@@ -1,3 +1,6 @@
+@using System.Security.Claims
+@using BloodPressure.Shared.Auth
+@using BloodPressure.Shared.Domain
 @implements IDisposable
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -13,7 +16,13 @@
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
     <nav class="nav flex-column">
         <AuthorizeView>
-            <Authorized>
+            <Authorized Context="authState">
+                <div class="nav-item px-3">
+                    <div class="nav-link">
+                        <div>@GetEmail(authState.User)</div>
+                        <small>Ruolo: @GetRole(authState.User)</small>
+                    </div>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="readings">
                         Rilevazioni
@@ -34,11 +43,14 @@
                         Impostazioni
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin">
-                        Admin
-                    </NavLink>
-                </div>
+                @if (IsAdmin(authState.User))
+                {
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="admin">
+                            Admin
+                        </NavLink>
+                    </div>
+                }
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
@@ -76,6 +88,20 @@
     {
         InvokeAsync(StateHasChanged);
     }
+
+    private static bool IsAdmin(ClaimsPrincipal user)
+        => user.GetUserRole() == UserRole.Admin;
+
+    private static string GetEmail(ClaimsPrincipal user)
+    {
+        return user.FindFirst(ClaimTypes.Email)?.Value
+            ?? user.FindFirst("email")?.Value
+            ?? user.Identity?.Name
+            ?? "Utente";
+    }
+
+    private static string GetRole(ClaimsPrincipal user)
+        => user.GetUserRole().ToString();
 
     public void Dispose()
     {

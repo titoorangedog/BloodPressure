@@ -98,6 +98,13 @@ public sealed class ReadApiClient(HttpClient httpClient)
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<LicenseDto>(cancellationToken))!;
     }
+
+    public async Task<LicenseDto> UpdateLicenseAsync(Guid userId, Guid licenseId, LicenseUpdateRequest request, CancellationToken cancellationToken)
+    {
+        var response = await httpClient.PutAsJsonAsync($"/admin/users/{userId}/licenses/{licenseId}", request, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<LicenseDto>(cancellationToken))!;
+    }
 }
 
 public sealed class WriteApiClient(HttpClient httpClient)

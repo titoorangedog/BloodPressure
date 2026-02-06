@@ -44,6 +44,7 @@ builder.Services.AddDbContext<BloodPressureDbContext>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
         options.TokenValidationParameters = new TokenValidationParameters
         {

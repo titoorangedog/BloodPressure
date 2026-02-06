@@ -34,6 +34,7 @@ builder.Services.AddDbContext<BloodPressureDbContext>(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = false;
         var jwt = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()!;
         options.TokenValidationParameters = new TokenValidationParameters
         {
@@ -309,14 +310,14 @@ api.MapGet("/licenses/me", async (
     }
 
     var now = DateTimeOffset.UtcNow;
-    var daysRemaining = LicenseCalculator.CalculateDaysRemaining(now, license.EndDateUtc);
+    var daysRemaining = LicenseCalculator.CalculateDaysRemaining(license.Type, now, license.EndDateUtc);
     return Results.Ok(new ActiveLicenseResponse
     {
         Type = license.Type,
         StartDateUtc = license.StartDateUtc,
         EndDateUtc = license.EndDateUtc,
         DaysRemaining = daysRemaining,
-        IsExpired = license.EndDateUtc <= now
+        IsExpired = LicenseCalculator.IsExpired(license.Type, now, license.EndDateUtc)
     });
 });
 
@@ -399,28 +400,27 @@ admin.MapPost("/users/{id:guid}/licenses", async (
     BloodPressureDbContext db,
     CancellationToken cancellationToken) =>
 {
-    var user = await db.Users.Include(x => x.Licenses).SingleOrDefaultAsync(x => x.Id == id, cancellationToken);
-    if (user is null)
+    var userExists = await db.Users.AnyAsync(x => x.Id == id, cancellationToken);
+    if (!userExists)
     {
         return Results.NotFound();
     }
 
-    foreach (var license in user.Licenses.Where(x => x.IsActive))
-    {
-        license.IsActive = false;
-    }
+    await db.Licenses
+        .Where(x => x.UserId == id && x.IsActive)
+        .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.IsActive, false), cancellationToken);
 
     var newLicense = new LicenseEntity
     {
         Id = Guid.NewGuid(),
-        UserId = user.Id,
+        UserId = id,
         Type = request.Type,
         StartDateUtc = request.StartDateUtc,
         EndDateUtc = request.EndDateUtc,
         IsActive = true
     };
 
-    user.Licenses.Add(newLicense);
+    db.Licenses.Add(newLicense);
     await db.SaveChangesAsync(cancellationToken);
     return Results.Ok(new LicenseDto
     {
@@ -429,6 +429,40 @@ admin.MapPost("/users/{id:guid}/licenses", async (
         StartDateUtc = newLicense.StartDateUtc,
         EndDateUtc = newLicense.EndDateUtc,
         IsActive = true
+    });
+});
+
+admin.MapPut("/users/{id:guid}/licenses/{licenseId:guid}", async (
+    Guid id,
+    Guid licenseId,
+    LicenseUpdateRequest request,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var license = await db.Licenses.SingleOrDefaultAsync(
+        x => x.UserId == id && x.Id == licenseId, cancellationToken);
+    if (license is null)
+    {
+        return Results.NotFound();
+    }
+
+    if (!license.IsActive)
+    {
+        return Results.BadRequest("Only the active license can be modified.");
+    }
+
+    license.Type = request.Type;
+    license.StartDateUtc = request.StartDateUtc;
+    license.EndDateUtc = request.EndDateUtc;
+
+    await db.SaveChangesAsync(cancellationToken);
+    return Results.Ok(new LicenseDto
+    {
+        Id = license.Id,
+        Type = license.Type,
+        StartDateUtc = license.StartDateUtc,
+        EndDateUtc = license.EndDateUtc,
+        IsActive = license.IsActive
     });
 });
 

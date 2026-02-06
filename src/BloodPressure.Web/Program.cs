@@ -15,6 +15,7 @@ builder.Services.AddScoped<JwtAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthenticationStateProvider>());
 builder.Services.AddTransient<AuthMessageHandler>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton<ToastService>();
 
 string ResolveApiBase(string key) => builder.Configuration[key] ?? builder.HostEnvironment.BaseAddress;
 

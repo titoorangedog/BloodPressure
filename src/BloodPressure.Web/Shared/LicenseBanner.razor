@@ -1,4 +1,5 @@
 @using BloodPressure.Shared.Contracts
+@using BloodPressure.Shared.Domain
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -31,21 +32,30 @@
                 return;
             }
 
+            var remainingText = LicenseCalculator.FormatRemainingItalian(DateTimeOffset.UtcNow, license.EndDateUtc);
+
+            if (license.Type == LicenseType.Premium)
+            {
+                Message = $"Licenza: {license.Type} - Illimitata";
+                AlertClass = "alert-success";
+                return;
+            }
+
             if (license.IsExpired)
             {
-                Message = $"Licenza: {license.Type} — Scaduta";
+                Message = $"Licenza: {license.Type} - Scaduta";
                 AlertClass = "alert-danger";
                 return;
             }
 
             if (license.DaysRemaining <= 14)
             {
-                Message = $"Licenza: {license.Type} — Scade tra {license.DaysRemaining} giorni";
+                Message = $"Licenza: {license.Type} - Scade tra {remainingText}";
                 AlertClass = "alert-warning";
                 return;
             }
 
-            Message = $"Licenza: {license.Type} — Scade tra {license.DaysRemaining} giorni";
+            Message = $"Licenza: {license.Type} - Scade tra {remainingText}";
             AlertClass = "alert-success";
         }
         catch
@@ -54,4 +64,5 @@
         }
     }
 }
+
 
