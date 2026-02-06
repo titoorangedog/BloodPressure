@@ -7,15 +7,6 @@
     </div>
 
     <main>
-        <LicenseBanner />
-        <div class="top-row px-4">
-            <AuthorizeView>
-                <Authorized>
-                    <button class="btn btn-outline-primary" @onclick="AuthService.LogoutAsync">Logout</button>
-                </Authorized>
-            </AuthorizeView>
-        </div>
-
         <article class="content px-4">
             @Body
         </article>
