@@ -16,13 +16,14 @@
 </div>
 
 <div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <AuthorizeView>
-            <Authorized Context="authState">
+    <div class="nav-body">
+        <nav class="nav flex-column nav-items">
+            @if (IsAuthenticated)
+            {
                 <div class="nav-item px-3">
                     <div class="nav-link">
-                        <div>@GetEmail(authState.User)</div>
-                        <small>Ruolo: @GetRole(authState.User)</small>
+                        <div>@GetEmail(CurrentUser)</div>
+                        <small>Ruolo: @GetRole(CurrentUser)</small>
                     </div>
                 </div>
                 <div class="nav-item px-3">
@@ -45,7 +46,7 @@
                         Impostazioni
                     </NavLink>
                 </div>
-                @if (IsAdmin(authState.User))
+                @if (IsAdmin(CurrentUser))
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="admin">
@@ -53,29 +54,33 @@
                         </NavLink>
                     </div>
                 }
-            </Authorized>
-        </AuthorizeView>
-    </nav>
-    <div class="nav-item px-3 mt-3">
-        <LicenseBanner />
-    </div>
-    <div class="nav-item px-3 mt-3">
-        <AuthorizeView>
-            <Authorized>
-                <button class="btn btn-outline-primary w-100" @onclick="AuthService.LogoutAsync">Logout</button>
-            </Authorized>
-            <NotAuthorized>
-                <NavLink class="btn btn-outline-primary w-100" href="login">
-                    Login
-                </NavLink>
-            </NotAuthorized>
-        </AuthorizeView>
+            }
+        </nav>
+        <div class="nav-footer">
+            <div class="nav-item px-3 mt-3">
+                <LicenseBanner />
+            </div>
+            <div class="nav-item px-3 mt-3">
+                @if (IsAuthenticated)
+                {
+                    <button class="btn btn-outline-primary w-100" @onclick="AuthService.LogoutAsync">Logout</button>
+                }
+                else
+                {
+                    <NavLink class="btn btn-outline-primary w-100" href="login">
+                        Login
+                    </NavLink>
+                }
+            </div>
+        </div>
     </div>
 </div>
 
 @code {
     private bool collapseNavMenu = true;
     private bool isSubscribed;
+    private ClaimsPrincipal CurrentUser { get; set; } = new(new ClaimsIdentity());
+    private bool IsAuthenticated => CurrentUser.Identity?.IsAuthenticated == true;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
@@ -84,19 +89,26 @@
         collapseNavMenu = !collapseNavMenu;
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (!isSubscribed)
         {
             AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
             isSubscribed = true;
         }
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        CurrentUser = authState.User;
     }
 
-    // Fix: Change signature to match expected delegate (void return type)
-    private void OnAuthenticationStateChanged(Task<AuthenticationState> _)
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask)
     {
-        InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            var authState = await authStateTask;
+            CurrentUser = authState.User;
+            StateHasChanged();
+        });
     }
 
     private static bool IsAdmin(ClaimsPrincipal user)
