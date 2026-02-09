@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using System.Text;
+using System.Xml.Serialization;
 using BloodPressure.Persistence;
 using BloodPressure.Persistence.Entities;
 using BloodPressure.Shared.Auth;
 using BloodPressure.Shared.Contracts;
 using BloodPressure.Shared.Domain;
 using BloodPressure.Shared.Options;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -139,6 +141,83 @@ api.MapGet("/readings", async (
         .ToListAsync(cancellationToken);
 
     return Results.Ok(results);
+});
+
+api.MapGet("/readings/export/excel", async (
+    ClaimsPrincipal user,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var exportItems = await LoadExportItemsAsync(user, db, cancellationToken);
+    var content = BuildExcelExport(exportItems);
+    var fileName = $"readings-{DateTime.UtcNow:yyyyMMddHHmmss}.xlsx";
+    return Results.File(
+        content,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileName);
+});
+
+api.MapGet("/readings/template/excel", () =>
+{
+    var content = BuildExcelExport(Array.Empty<ReadingExportItem>());
+    var fileName = "readings-template.xlsx";
+    return Results.File(
+        content,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileName);
+});
+
+api.MapGet("/readings/example/excel", () =>
+{
+    var content = BuildExcelExport(BuildExampleItems());
+    var fileName = "readings-example.xlsx";
+    return Results.File(
+        content,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        fileName);
+});
+
+api.MapGet("/readings/export/xml", async (
+    ClaimsPrincipal user,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var exportItems = await LoadExportItemsAsync(user, db, cancellationToken);
+    var exportFile = new ReadingsExportFile { Readings = exportItems };
+    var serializer = new XmlSerializer(typeof(ReadingsExportFile));
+    using var stream = new MemoryStream();
+    serializer.Serialize(stream, exportFile);
+    var fileName = $"readings-{DateTime.UtcNow:yyyyMMddHHmmss}.xml";
+    return Results.File(
+        stream.ToArray(),
+        "application/xml",
+        fileName);
+});
+
+api.MapGet("/readings/template/xml", () =>
+{
+    var exportFile = new ReadingsExportFile();
+    var serializer = new XmlSerializer(typeof(ReadingsExportFile));
+    using var stream = new MemoryStream();
+    serializer.Serialize(stream, exportFile);
+    var fileName = "readings-template.xml";
+    return Results.File(
+        stream.ToArray(),
+        "application/xml",
+        fileName);
+});
+
+api.MapGet("/readings/example/xml", () =>
+{
+    var exportFile = new ReadingsExportFile { Readings = BuildExampleItems() };
+    var serializer = new XmlSerializer(typeof(ReadingsExportFile));
+    using var stream = new MemoryStream();
+    serializer.Serialize(stream, exportFile);
+    var fileName = "readings-example.xml";
+    return Results.File(
+        stream.ToArray(),
+        "application/xml",
+        fileName);
 });
 
 api.MapGet("/readings/{id:guid}", async (
@@ -491,6 +570,117 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.Run();
+
+static async Task<List<ReadingExportItem>> LoadExportItemsAsync(
+    ClaimsPrincipal user,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken)
+{
+    var userId = user.GetUserId();
+    var entities = await db.Readings
+        .AsNoTracking()
+        .Include(x => x.Symptoms)
+        .ThenInclude(x => x.SymptomOption)
+        .Include(x => x.TimeSlotOption)
+        .Include(x => x.SportActivityOption)
+        .Where(x => x.UserId == userId)
+        .OrderByDescending(x => x.TimestampUtc)
+        .ToListAsync(cancellationToken);
+
+    return entities.Select(entity => new ReadingExportItem
+        {
+            Id = entity.Id,
+            Systolic = entity.Systolic,
+            Diastolic = entity.Diastolic,
+            HeartRate = entity.HeartRate,
+            WeightKg = entity.WeightKg,
+            TimestampUtc = entity.TimestampUtc,
+            Notes = entity.Notes,
+            Position = entity.Position,
+            MedicationSkipped = entity.MedicationSkipped,
+            Severity = entity.Severity,
+            ColorKey = entity.ColorKey,
+            TimeSlotOptionId = entity.TimeSlotOptionId,
+            TimeSlotName = entity.TimeSlotOption?.Name,
+            SportActivityOptionId = entity.SportActivityOptionId,
+            SportActivityName = entity.SportActivityOption?.Name,
+            SymptomOptionIds = entity.Symptoms
+                .Where(x => x.SymptomOption is not null)
+                .Select(x => x.SymptomOption!.Id)
+                .ToList(),
+            SymptomOptionNames = entity.Symptoms
+                .Where(x => x.SymptomOption is not null)
+                .Select(x => x.SymptomOption!.Name)
+                .ToList()
+        })
+        .ToList();
+}
+
+static byte[] BuildExcelExport(IReadOnlyCollection<ReadingExportItem> items)
+{
+    using var workbook = new XLWorkbook();
+    var sheet = workbook.Worksheets.Add("Readings");
+
+    for (var i = 0; i < ReadingImportExportColumns.All.Length; i++)
+    {
+        sheet.Cell(1, i + 1).Value = ReadingImportExportColumns.All[i];
+    }
+
+    var row = 2;
+    foreach (var item in items)
+    {
+        var col = 1;
+        sheet.Cell(row, col++).Value = item.Id?.ToString();
+        sheet.Cell(row, col++).Value = item.TimestampUtc.ToString("O");
+        sheet.Cell(row, col++).Value = item.Systolic;
+        sheet.Cell(row, col++).Value = item.Diastolic;
+        sheet.Cell(row, col++).Value = item.HeartRate;
+        sheet.Cell(row, col++).Value = item.WeightKg;
+        sheet.Cell(row, col++).Value = item.Notes;
+        sheet.Cell(row, col++).Value = item.Position.ToString();
+        sheet.Cell(row, col++).Value = item.MedicationSkipped;
+        sheet.Cell(row, col++).Value = item.Severity.ToString();
+        sheet.Cell(row, col++).Value = item.ColorKey.ToString();
+        sheet.Cell(row, col++).Value = item.TimeSlotOptionId;
+        sheet.Cell(row, col++).Value = item.TimeSlotName;
+        sheet.Cell(row, col++).Value = item.SportActivityOptionId;
+        sheet.Cell(row, col++).Value = item.SportActivityName;
+        sheet.Cell(row, col++).Value = string.Join(",", item.SymptomOptionIds);
+        sheet.Cell(row, col++).Value = string.Join(",", item.SymptomOptionNames);
+        row++;
+    }
+
+    using var stream = new MemoryStream();
+    workbook.SaveAs(stream);
+    return stream.ToArray();
+}
+
+static List<ReadingExportItem> BuildExampleItems()
+{
+    return
+    [
+        new ReadingExportItem
+        {
+            Id = Guid.NewGuid(),
+            TimestampUtc = new DateTimeOffset(2026, 1, 15, 7, 30, 0, TimeSpan.Zero),
+            Systolic = 120,
+            Diastolic = 78,
+            HeartRate = 68,
+            WeightKg = 72.5m,
+            Notes = "Esempio compilato",
+            Position = Position.Sitting,
+            MedicationSkipped = false,
+            Severity = Severity.Normal,
+            ColorKey = ColorKey.Green,
+            TimeSlotOptionId = null,
+            TimeSlotName = "Mattina",
+            SportActivityOptionId = null,
+            SportActivityName = "Passeggiata",
+            SymptomOptionIds = new List<int>(),
+            SymptomOptionNames = new List<string> { "Mal di testa" }
+        }
+    ];
+}
 
 static UserSettingsEntity BuildDefaultSettings(Guid userId, ClinicalThresholdsOptions options)
 {

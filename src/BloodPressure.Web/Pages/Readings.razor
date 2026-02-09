@@ -1,12 +1,98 @@
 @page "/readings"
 @using BloodPressure.Shared.Contracts
+@using Microsoft.AspNetCore.Components.Forms
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <h1>Rilevazioni</h1>
 
-<button class="btn btn-primary mb-3" @onclick="CreateNew">Nuova rilevazione</button>
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <button class="btn btn-primary" @onclick="CreateNew">Nuova rilevazione</button>
+    <button class="btn btn-outline-primary" @onclick="ToggleExportPanel">Esporta dati</button>
+    <button class="btn btn-outline-secondary" @onclick="ToggleImportPanel">Importa dati</button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(InfoMessage))
+{
+    <div class="alert alert-info" role="alert">@InfoMessage</div>
+}
+
+@if (ErrorMessages.Count > 0)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Import fallito.</strong>
+        <ul class="mb-0">
+            @foreach (var error in ErrorMessages)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(SuccessMessage))
+{
+    <div class="alert alert-success" role="alert">@SuccessMessage</div>
+}
+
+@if (ShowExportPanel)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Esporta rilevazioni</h5>
+            <p class="card-text">Scarica tutte le rilevazioni in formato Excel o XML.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <button class="btn btn-success" @onclick="ExportExcel">Scarica Excel</button>
+                <button class="btn btn-outline-success" @onclick="ExportXml">Scarica XML</button>
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                <button class="btn btn-outline-secondary" @onclick="DownloadTemplateExcel">Template Excel</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadTemplateXml">Template XML</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadExampleExcel">Esempio compilato Excel</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadExampleXml">Esempio compilato XML</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (ShowImportPanel)
+{
+    <div class="card mb-3">
+        <div class="card-body">
+            <h5 class="card-title">Importa rilevazioni</h5>
+            <p class="card-text">Carica un file Excel o XML con tutte le informazioni delle rilevazioni.</p>
+            <div class="mb-3">
+                <h6 class="mb-2">Campi richiesti</h6>
+                <ul class="mb-0">
+                    <li>TimestampUtc</li>
+                    <li>Systolic</li>
+                    <li>Diastolic</li>
+                </ul>
+                <div class="mt-2 small text-muted">
+                    Gli altri campi sono facoltativi. Per opzioni puoi usare gli ID oppure i nomi (TimeSlotName, SportActivityName, SymptomOptionNames).
+                </div>
+            </div>
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="mb-2">Excel</h6>
+                        <InputFile OnChange="HandleExcelSelected" accept=".xlsx,.xls" class="form-control" />
+                        <button class="btn btn-primary mt-2" @onclick="ImportExcel" disabled="@(!CanImportExcel)">Carica Excel</button>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-6">
+                    <div class="border rounded p-3 h-100">
+                        <h6 class="mb-2">XML</h6>
+                        <InputFile OnChange="HandleXmlSelected" accept=".xml" class="form-control" />
+                        <button class="btn btn-primary mt-2" @onclick="ImportXml" disabled="@(!CanImportXml)">Carica XML</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (IsLoading)
 {
@@ -42,7 +128,7 @@ else
                 <td>@reading.Severity</td>
                 <td>
                     <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => Edit(reading.Id)">Modifica</button>
-                    <button class="btn btn-sm btn-outline-danger" @onclick="() => Delete(reading.Id)">Elimina</button>
+                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(reading)">Elimina</button>
                 </td>
             </tr>
         }
@@ -50,9 +136,44 @@ else
     </table>
 }
 
+<div class="modal fade" id="deleteReadingModal" tabindex="-1" aria-labelledby="deleteReadingModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteReadingModalLabel">Conferma eliminazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vuoi eliminare definitivamente la rilevazione selezionata?</p>
+                @if (PendingDeleteTimestampUtc.HasValue)
+                {
+                    <div class="text-muted small">Data: @PendingDeleteTimestampUtc.Value.ToLocalTime():g</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Elimina</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
     private List<ReadingResponse> ReadingItems { get; set; } = new();
     private bool IsLoading { get; set; } = true;
+    private bool ShowExportPanel { get; set; }
+    private bool ShowImportPanel { get; set; }
+    private string? InfoMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+    private List<string> ErrorMessages { get; set; } = new();
+    private IBrowserFile? ExcelFile { get; set; }
+    private IBrowserFile? XmlFile { get; set; }
+    private bool IsImporting { get; set; }
+    private Guid? PendingDeleteId { get; set; }
+    private DateTimeOffset? PendingDeleteTimestampUtc { get; set; }
+
+    private bool CanImportExcel => ExcelFile is not null && !IsImporting;
+    private bool CanImportXml => XmlFile is not null && !IsImporting;
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,9 +192,161 @@ else
 
     private void Edit(Guid id) => Navigation.NavigateTo($"/readings/{id}");
 
-    private async Task Delete(Guid id)
+    private async Task RequestDelete(ReadingResponse reading)
     {
-        await WriteApiClient.DeleteReadingAsync(id, CancellationToken.None);
+        PendingDeleteId = reading.Id;
+        PendingDeleteTimestampUtc = reading.TimestampUtc;
+        await JS.InvokeVoidAsync("bpModal.show", "deleteReadingModal");
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (!PendingDeleteId.HasValue)
+        {
+            return;
+        }
+
+        await WriteApiClient.DeleteReadingAsync(PendingDeleteId.Value, CancellationToken.None);
         await LoadAsync();
+        PendingDeleteId = null;
+        PendingDeleteTimestampUtc = null;
+        await JS.InvokeVoidAsync("bpModal.hide", "deleteReadingModal");
+    }
+
+    private void ToggleExportPanel()
+    {
+        ShowExportPanel = !ShowExportPanel;
+        if (ShowExportPanel)
+        {
+            ShowImportPanel = false;
+        }
+        ClearMessages();
+    }
+
+    private void ToggleImportPanel()
+    {
+        ShowImportPanel = !ShowImportPanel;
+        if (ShowImportPanel)
+        {
+            ShowExportPanel = false;
+        }
+        ClearMessages();
+    }
+
+    private void ExportExcel()
+    {
+        ClearMessages();
+        Navigation.NavigateTo(ReadApiClient.GetExportExcelUrl(), true);
+    }
+
+    private void ExportXml()
+    {
+        ClearMessages();
+        Navigation.NavigateTo(ReadApiClient.GetExportXmlUrl(), true);
+    }
+
+    private void DownloadTemplateExcel()
+    {
+        ClearMessages();
+        Navigation.NavigateTo(ReadApiClient.GetTemplateExcelUrl(), true);
+    }
+
+    private void DownloadTemplateXml()
+    {
+        ClearMessages();
+        Navigation.NavigateTo(ReadApiClient.GetTemplateXmlUrl(), true);
+    }
+
+    private void DownloadExampleExcel()
+    {
+        ClearMessages();
+        Navigation.NavigateTo(ReadApiClient.GetExampleExcelUrl(), true);
+    }
+
+    private void DownloadExampleXml()
+    {
+        ClearMessages();
+        Navigation.NavigateTo(ReadApiClient.GetExampleXmlUrl(), true);
+    }
+
+    private void HandleExcelSelected(InputFileChangeEventArgs args)
+    {
+        ExcelFile = args.FileCount > 0 ? args.File : null;
+        ClearMessages();
+    }
+
+    private void HandleXmlSelected(InputFileChangeEventArgs args)
+    {
+        XmlFile = args.FileCount > 0 ? args.File : null;
+        ClearMessages();
+    }
+
+    private async Task ImportExcel()
+    {
+        if (ExcelFile is null)
+        {
+            ClearMessages();
+            InfoMessage = "Seleziona un file Excel.";
+            return;
+        }
+
+        ClearMessages();
+        IsImporting = true;
+        try
+        {
+            var result = await WriteApiClient.ImportExcelAsync(ExcelFile, CancellationToken.None);
+            SuccessMessage = $"Import completato. Inserite: {result.ImportedCount}. Duplicati ignorati: {result.SkippedDuplicates}. Totale: {result.TotalCount}.";
+            await LoadAsync();
+        }
+        catch (ImportException ex)
+        {
+            ErrorMessages = ex.Errors;
+        }
+        catch (Exception ex)
+        {
+            InfoMessage = ex.Message;
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
+
+    private async Task ImportXml()
+    {
+        if (XmlFile is null)
+        {
+            ClearMessages();
+            InfoMessage = "Seleziona un file XML.";
+            return;
+        }
+
+        ClearMessages();
+        IsImporting = true;
+        try
+        {
+            var result = await WriteApiClient.ImportXmlAsync(XmlFile, CancellationToken.None);
+            SuccessMessage = $"Import completato. Inserite: {result.ImportedCount}. Duplicati ignorati: {result.SkippedDuplicates}. Totale: {result.TotalCount}.";
+            await LoadAsync();
+        }
+        catch (ImportException ex)
+        {
+            ErrorMessages = ex.Errors;
+        }
+        catch (Exception ex)
+        {
+            InfoMessage = ex.Message;
+        }
+        finally
+        {
+            IsImporting = false;
+        }
+    }
+
+    private void ClearMessages()
+    {
+        InfoMessage = null;
+        SuccessMessage = null;
+        ErrorMessages = new List<string>();
     }
 }
