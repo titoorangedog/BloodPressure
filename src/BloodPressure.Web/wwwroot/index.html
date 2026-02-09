@@ -33,6 +33,21 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/charts.js"></script>
+    <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        window.bpModal = {
+            show: function (id) {
+                var element = document.getElementById(id);
+                if (!element) return;
+                bootstrap.Modal.getOrCreateInstance(element).show();
+            },
+            hide: function (id) {
+                var element = document.getElementById(id);
+                if (!element) return;
+                bootstrap.Modal.getOrCreateInstance(element).hide();
+            }
+        };
+    </script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
     <script>navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' });</script>
 </body>

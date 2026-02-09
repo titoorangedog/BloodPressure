@@ -17,7 +17,30 @@ builder.Services.AddTransient<AuthMessageHandler>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<ToastService>();
 
-string ResolveApiBase(string key) => builder.Configuration[key] ?? builder.HostEnvironment.BaseAddress;
+string ResolveApiBase(string key)
+{
+    var value = builder.Configuration[key];
+    var baseAddress = builder.HostEnvironment.BaseAddress;
+    if (string.IsNullOrWhiteSpace(value) ||
+        string.Equals(value.TrimEnd('/'), baseAddress.TrimEnd('/'), StringComparison.OrdinalIgnoreCase))
+    {
+        value = key switch
+        {
+            "Api:AuthService" => "/api/auth/",
+            "Api:WriteService" => "/api/write/",
+            "Api:ReadService" => "/api/read/",
+            "Api:StatsService" => "/api/stats/",
+            _ => builder.HostEnvironment.BaseAddress
+        };
+    }
+
+    if (value.StartsWith("/"))
+    {
+        return new Uri(new Uri(builder.HostEnvironment.BaseAddress), value).ToString();
+    }
+
+    return value;
+}
 
 builder.Services.AddHttpClient<AuthApiClient>(client =>
 {
