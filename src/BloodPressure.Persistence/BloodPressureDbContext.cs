@@ -38,6 +38,17 @@ public sealed class BloodPressureDbContext(DbContextOptions<BloodPressureDbConte
             value => (value ?? Array.Empty<int>()).Aggregate(0, (current, element) => HashCode.Combine(current, element)),
             value => (value ?? Array.Empty<int>()).ToArray());
 
+        var timeSlotDefinitionConverter = new ValueConverter<IReadOnlyCollection<TimeSlotDefinitionEntity>, string>(
+            value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
+            value => JsonSerializer.Deserialize<IReadOnlyCollection<TimeSlotDefinitionEntity>>(value, (JsonSerializerOptions?)null)
+                     ?? Array.Empty<TimeSlotDefinitionEntity>());
+
+        var timeSlotDefinitionComparer = new ValueComparer<IReadOnlyCollection<TimeSlotDefinitionEntity>>(
+            (left, right) => JsonSerializer.Serialize(left ?? Array.Empty<TimeSlotDefinitionEntity>(), (JsonSerializerOptions?)null)
+                == JsonSerializer.Serialize(right ?? Array.Empty<TimeSlotDefinitionEntity>(), (JsonSerializerOptions?)null),
+            value => JsonSerializer.Serialize(value ?? Array.Empty<TimeSlotDefinitionEntity>(), (JsonSerializerOptions?)null).GetHashCode(),
+            value => value == null ? Array.Empty<TimeSlotDefinitionEntity>() : value.ToArray());
+
         modelBuilder.Entity<UserEntity>(builder =>
         {
             builder.HasKey(x => x.Id);
@@ -92,7 +103,11 @@ public sealed class BloodPressureDbContext(DbContextOptions<BloodPressureDbConte
             {
                 ui.Property(p => p.CompactMode).HasDefaultValue(false);
             });
-        });
+
+        builder.Property(x => x.TimeSlotDefinitions)
+            .HasConversion(timeSlotDefinitionConverter)
+            .Metadata.SetValueComparer(timeSlotDefinitionComparer);
+    });
 
         modelBuilder.Entity<LicenseEntity>(builder =>
         {
@@ -161,10 +176,11 @@ public sealed class BloodPressureDbContext(DbContextOptions<BloodPressureDbConte
             new SymptomOptionEntity { Id = 5, Name = "Blurred Vision" });
 
         modelBuilder.Entity<TimeSlotOptionEntity>().HasData(
-            new TimeSlotOptionEntity { Id = 1, Name = "Morning" },
-            new TimeSlotOptionEntity { Id = 2, Name = "Afternoon" },
-            new TimeSlotOptionEntity { Id = 3, Name = "Evening" },
-            new TimeSlotOptionEntity { Id = 4, Name = "Night" });
+            new TimeSlotOptionEntity { Id = 1, Name = "Mattino" },
+            new TimeSlotOptionEntity { Id = 2, Name = "Pomeriggio" },
+            new TimeSlotOptionEntity { Id = 3, Name = "Sera" },
+            new TimeSlotOptionEntity { Id = 4, Name = "Notte" },
+            new TimeSlotOptionEntity { Id = 5, Name = "Mezzo giorno" });
 
         modelBuilder.Entity<SportActivityOptionEntity>().HasData(
             new SportActivityOptionEntity { Id = 1, Name = "None" },

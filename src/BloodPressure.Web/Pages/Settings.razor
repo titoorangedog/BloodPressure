@@ -83,12 +83,23 @@ else
             <InputCheckbox class="form-check-input" @bind-Value="Model.CompactMode" />
         </div>
 
-        <button class="btn btn-primary" type="submit">Salva</button>
+        <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+            @if (IsSaving)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span>Salvataggio...</span>
+            }
+            else
+            {
+                <span>Salva</span>
+            }
+        </button>
     </EditForm>
 }
 
 @code {
     private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
     private SettingsFormModel Model { get; set; } = SettingsFormModel.CreateDefault();
 
     protected override async Task OnInitializedAsync()
@@ -100,6 +111,12 @@ else
 
     private async Task SaveAsync()
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
+        IsSaving = true;
         try
         {
             var request = Model.ToRequest();
@@ -110,6 +127,10 @@ else
         {
             ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
             ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
+        finally
+        {
+            IsSaving = false;
         }
     }
 
@@ -126,6 +147,7 @@ else
 
         public int DefaultRangeDays { get; set; } = 30;
         public bool CompactMode { get; set; }
+        public List<TimeSlotDefinitionFormModel> TimeSlotDefinitions { get; set; } = new();
 
         public static SettingsFormModel CreateDefault()
         {
@@ -134,7 +156,8 @@ else
                 Systolic = new ThresholdSetFormModel { VeryLowMax = 90, LowMax = 100, NormalMax = 130, HighMax = 150 },
                 Diastolic = new ThresholdSetFormModel { VeryLowMax = 60, LowMax = 70, NormalMax = 85, HighMax = 95 },
                 DefaultRangeDays = 30,
-                CompactMode = false
+                CompactMode = false,
+                TimeSlotDefinitions = TimeSlotDefinitionFormModel.BuildDefaults()
             };
         }
 
@@ -150,7 +173,8 @@ else
                 Systolic = ThresholdSetFormModel.FromDto(response.Thresholds.Systolic),
                 Diastolic = ThresholdSetFormModel.FromDto(response.Thresholds.Diastolic),
                 DefaultRangeDays = response.DashboardPreferences.DefaultRangeDays,
-                CompactMode = response.UiPreferences.CompactMode
+                CompactMode = response.UiPreferences.CompactMode,
+                TimeSlotDefinitions = TimeSlotDefinitionFormModel.FromDto(response.TimeSlotDefinitions)
             };
         }
 
@@ -170,7 +194,8 @@ else
                 },
                 DashboardPreferences = new DashboardPreferencesDto { DefaultRangeDays = DefaultRangeDays },
                 DefaultSelections = new DefaultSelectionsDto(),
-                UiPreferences = new UiPreferencesDto { CompactMode = CompactMode }
+                UiPreferences = new UiPreferencesDto { CompactMode = CompactMode },
+                TimeSlotDefinitions = TimeSlotDefinitions.Select(TimeSlotDefinitionFormModel.ToDto).ToList()
             };
         }
     }
@@ -201,6 +226,53 @@ else
                 LowMax = LowMax,
                 NormalMax = NormalMax,
                 HighMax = HighMax
+            };
+        }
+    }
+
+    private sealed class TimeSlotDefinitionFormModel
+    {
+        public string Key { get; set; } = string.Empty;
+        public string Label { get; set; } = string.Empty;
+        public string Start { get; set; } = "00:00";
+        public string End { get; set; } = "00:00";
+
+        public static List<TimeSlotDefinitionFormModel> BuildDefaults()
+        {
+            return new List<TimeSlotDefinitionFormModel>
+            {
+                new() { Key = "Morning", Label = "Mattino", Start = "06:00", End = "10:59" },
+                new() { Key = "Midday", Label = "Mezzo giorno", Start = "11:00", End = "14:59" },
+                new() { Key = "Afternoon", Label = "Pomeriggio", Start = "15:00", End = "19:59" },
+                new() { Key = "Evening", Label = "Sera", Start = "20:00", End = "23:59" },
+                new() { Key = "Night", Label = "Notte", Start = "00:00", End = "05:59" }
+            };
+        }
+
+        public static List<TimeSlotDefinitionFormModel> FromDto(IReadOnlyCollection<TimeSlotDefinitionDto> definitions)
+        {
+            if (definitions.Count == 0)
+            {
+                return BuildDefaults();
+            }
+
+            return definitions.Select(def => new TimeSlotDefinitionFormModel
+            {
+                Key = def.Key,
+                Label = def.Label,
+                Start = def.Start,
+                End = def.End
+            }).ToList();
+        }
+
+        public static TimeSlotDefinitionDto ToDto(TimeSlotDefinitionFormModel model)
+        {
+            return new TimeSlotDefinitionDto
+            {
+                Key = model.Key,
+                Label = model.Label,
+                Start = model.Start,
+                End = model.End
             };
         }
     }

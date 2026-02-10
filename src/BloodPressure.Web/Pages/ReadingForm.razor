@@ -2,10 +2,13 @@
 @page "/readings/{Id:guid}"
 @using BloodPressure.Shared.Contracts
 @using BloodPressure.Shared.Domain
+@using System.Globalization
+@using System.ComponentModel.DataAnnotations
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject BloodPressure.Web.Services.ToastService ToastService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <h1>@(IsEdit ? "Modifica rilevazione" : "Nuova rilevazione")</h1>
 
@@ -19,77 +22,116 @@ else
         <DataAnnotationsValidator />
         <ValidationSummary />
 
-        <div class="mb-3">
-            <label class="form-label">Sistolica</label>
-            <InputNumber class="form-control" @bind-Value="Model.Systolic" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Diastolica</label>
-            <InputNumber class="form-control" @bind-Value="Model.Diastolic" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Heart rate</label>
-            <InputNumber class="form-control" @bind-Value="Model.HeartRate" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Peso (kg)</label>
-            <InputNumber class="form-control" @bind-Value="Model.WeightKg" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Timestamp (locale)</label>
-            <InputDate class="form-control" @bind-Value="Model.TimestampLocal" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Posizione</label>
-            <InputSelect class="form-select" @bind-Value="Model.Position">
-                @foreach (var value in Enum.GetValues<Position>())
-                {
-                    <option value="@value">@value</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Note</label>
-            <InputTextArea class="form-control" @bind-Value="Model.Notes" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Farmaco saltato</label>
-            <InputCheckbox class="form-check-input" @bind-Value="Model.MedicationSkipped" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Fascia oraria</label>
-            <InputSelect class="form-select" @bind-Value="Model.TimeSlotOptionId">
-                <option value="">(non selezionato)</option>
-                @foreach (var option in Options.TimeSlotOptions)
-                {
-                    <option value="@option.Id">@option.Name</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Attività sportiva</label>
-            <InputSelect class="form-select" @bind-Value="Model.SportActivityOptionId">
-                <option value="">(non selezionato)</option>
-                @foreach (var option in Options.SportActivityOptions)
-                {
-                    <option value="@option.Id">@option.Name</option>
-                }
-            </InputSelect>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Sintomi</label>
-            @foreach (var option in Options.SymptomOptions)
-            {
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" checked="@Model.SymptomOptionIds.Contains(option.Id)"
-                           @onchange="e => ToggleSymptom(option.Id, (bool)e.Value!)" />
-                    <label class="form-check-label">@option.Name</label>
+        <div class="row g-3">
+            <div class="col-12 col-lg-3">
+                <div class="mb-3">
+                    <label class="form-label">Data (locale)</label>
+                    <InputDate class="form-control" @bind-Value="Model.DateLocal" @onchange="OnDateOrTimeChanged" />
                 </div>
-            }
+            </div>
+            <div class="col-12 col-lg-3">
+                <div class="mb-3">
+                    <label class="form-label">Ora (locale)</label>
+                    <input class="form-control bp-timepicker"
+                           type="text"
+                           inputmode="numeric"
+                           placeholder="HH:mm"
+                           @bind-value="Model.TimeLocalText"
+                           @bind-value:event="oninput"
+                           @onchange="OnDateOrTimeChanged" />
+                    <div class="form-text">Formato 24 ore (HH:mm).</div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-3">
+                <div class="mb-3">
+                    <label class="form-label">Sistolica</label>
+                    <InputNumber class="form-control" @bind-Value="Model.Systolic" />
+                </div>
+            </div>
+            <div class="col-12 col-lg-3">
+                <div class="mb-3">
+                    <label class="form-label">Diastolica</label>
+                    <InputNumber class="form-control" @bind-Value="Model.Diastolic" />
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="mb-3">
+                    <label class="form-label">Peso (kg)</label>
+                    <InputNumber class="form-control" @bind-Value="Model.WeightKg" />
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="mb-3">
+                    <label class="form-label">Heart rate</label>
+                    <InputNumber class="form-control" @bind-Value="Model.HeartRate" />
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="mb-3">
+                    <label class="form-label">Posizione</label>
+                    <InputSelect class="form-select" @bind-Value="Model.Position">
+                        @foreach (var value in Enum.GetValues<Position>())
+                        {
+                            <option value="@value">@value</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="mb-3">
+                    <label class="form-label">Attivita sportiva</label>
+                    <InputSelect class="form-select" @bind-Value="Model.SportActivityOptionId">
+                        <option value="">(non selezionato)</option>
+                        @foreach (var option in Options.SportActivityOptions)
+                        {
+                            <option value="@option.Id">@option.Name</option>
+                        }
+                    </InputSelect>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-6">
+                <div class="mb-3">
+                    <label class="form-label">Farmaco saltato</label>
+                    <InputCheckbox class="form-check-input" @bind-Value="Model.MedicationSkipped" />
+                </div>
+            </div>
+            <div class="col-12 col-lg-6">
+                <div class="mb-3">
+                    <label class="form-label">Sintomi</label>
+                    @foreach (var option in Options.SymptomOptions)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" checked="@Model.SymptomOptionIds.Contains(option.Id)"
+                                   @onchange="e => ToggleSymptom(option.Id, (bool)e.Value!)" />
+                            <label class="form-check-label">@option.Name</label>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="col-12">
+                <div class="mb-3">
+                    <label class="form-label">Note</label>
+                    <InputTextArea class="form-control" @bind-Value="Model.Notes" />
+                </div>
+            </div>
         </div>
 
-        <button class="btn btn-primary" type="submit">Salva</button>
-        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel">Annulla</button>
+        <button class="btn btn-primary" type="submit" disabled="@IsSaving">
+            @if (IsSaving)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span>Salvataggio...</span>
+            }
+            else
+            {
+                <span>Salva</span>
+            }
+        </button>
+        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel" disabled="@IsSaving">Annulla</button>
     </EditForm>
 }
 
@@ -98,17 +140,22 @@ else
 
     private bool IsEdit => Id.HasValue;
     private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
     private OptionListResponse Options { get; set; } = new OptionListResponse
     {
         SymptomOptions = Array.Empty<OptionItemDto>(),
         TimeSlotOptions = Array.Empty<OptionItemDto>(),
         SportActivityOptions = Array.Empty<OptionItemDto>()
     };
+    private List<TimeSlotDefinitionDto> TimeSlotDefinitions { get; set; } = new();
     private ReadingFormModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
         Options = await ReadApiClient.GetOptionsAsync(CancellationToken.None);
+        var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
+        TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
+        EnsureDefaultSportActivity();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -123,11 +170,27 @@ else
             Model = ReadingFormModel.New();
         }
 
+        EnsureDefaultSportActivity();
+        UpdateTimeSlotFromTime(!IsEdit);
         IsLoading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("bpTimePicker.init");
+        }
     }
 
     private async Task HandleSubmit()
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
+        IsSaving = true;
         try
         {
             var request = Model.ToCreateRequest();
@@ -148,6 +211,10 @@ else
             ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
             ToastService.Show(ex.Message, ToastLevel.Error, 8000);
         }
+        finally
+        {
+            IsSaving = false;
+        }
     }
 
     private void Cancel() => Navigation.NavigateTo("/readings");
@@ -164,13 +231,236 @@ else
         }
     }
 
+    private void OnDateOrTimeChanged(ChangeEventArgs _)
+    {
+        NormalizeTimeText();
+        UpdateTimeSlotFromTime(false);
+    }
+
+    private void NormalizeTimeText()
+    {
+        if (TryParseTimeText(Model.TimeLocalText, out _, out var normalized))
+        {
+            Model.TimeLocalText = normalized;
+        }
+    }
+
+    private void UpdateTimeSlotFromTime(bool onlyIfEmpty)
+    {
+        var time = ParseTimeOrDefault(Model.TimeLocalText);
+        var dayPart = GetDayPart(time, GetDefinitions());
+        var timeSlotId = FindTimeSlotOptionId(dayPart);
+        if (timeSlotId.HasValue && (!onlyIfEmpty || Model.TimeSlotOptionId is null))
+        {
+            Model.TimeSlotOptionId = timeSlotId;
+        }
+    }
+
+    private void EnsureDefaultSportActivity()
+    {
+        if (IsEdit || Model.SportActivityOptionId.HasValue || Options.SportActivityOptions.Count == 0)
+        {
+            return;
+        }
+
+        var noneOption = Options.SportActivityOptions
+            .FirstOrDefault(option => string.Equals(option.Name, "None", StringComparison.OrdinalIgnoreCase));
+
+        if (noneOption is not null)
+        {
+            Model.SportActivityOptionId = noneOption.Id;
+        }
+    }
+
+    private int? FindTimeSlotOptionId(DayPart part)
+    {
+        if (Options.TimeSlotOptions.Count == 0)
+        {
+            return null;
+        }
+
+        var keywords = GetTimeSlotKeywords(part);
+        foreach (var option in Options.TimeSlotOptions)
+        {
+            var normalized = NormalizeOptionName(option.Name);
+            if (keywords.Any(keyword => normalized.Contains(keyword, StringComparison.OrdinalIgnoreCase)))
+            {
+                return option.Id;
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<string> GetTimeSlotKeywords(DayPart part) => part switch
+    {
+        DayPart.Morning => ["mattino", "morning", "am"],
+        DayPart.Midday => ["mezzo", "mezzogiorno", "midday", "noon"],
+        DayPart.Afternoon => ["pomeriggio", "afternoon", "pm"],
+        DayPart.Evening => ["sera", "evening"],
+        DayPart.Night => ["notte", "night"],
+        _ => []
+    };
+
+    private static string NormalizeOptionName(string name)
+        => name.Trim().Replace(" ", "", StringComparison.OrdinalIgnoreCase);
+
+    private static TimeSpan ParseTimeOrDefault(string? value)
+    {
+        return TryParseTimeText(value, out var time, out _) ? time : TimeSpan.Zero;
+    }
+
+    private DayPart GetCurrentDayPart()
+    {
+        var time = ParseTimeOrDefault(Model.TimeLocalText);
+        return GetDayPart(time, GetDefinitions());
+    }
+
+    private static DayPart GetDayPart(TimeSpan time, IReadOnlyCollection<TimeSlotDefinitionDto> definitions)
+    {
+        foreach (var definition in definitions)
+        {
+            if (!TryParseTime(definition.Start, out var start) || !TryParseTime(definition.End, out var end))
+            {
+                continue;
+            }
+
+            if (IsWithinRange(time, start, end))
+            {
+                return GetDayPartFromKey(definition.Key);
+            }
+        }
+
+        return DayPart.Night;
+    }
+
+    private string GetDayPartLabel(DayPart part)
+    {
+        var definition = GetDefinitions().FirstOrDefault(d => GetDayPartFromKey(d.Key) == part);
+        if (!string.IsNullOrWhiteSpace(definition?.Label))
+        {
+            return definition!.Label;
+        }
+
+        return part switch
+        {
+            DayPart.Morning => "Mattino",
+            DayPart.Midday => "Mezzo giorno",
+            DayPart.Afternoon => "Pomeriggio",
+            DayPart.Evening => "Sera",
+            DayPart.Night => "Notte",
+            _ => "Non definito"
+        };
+    }
+
+    private static DayPart GetDayPartFromKey(string? key) => key?.Trim().ToLowerInvariant() switch
+    {
+        "morning" => DayPart.Morning,
+        "midday" => DayPart.Midday,
+        "afternoon" => DayPart.Afternoon,
+        "evening" => DayPart.Evening,
+        "night" => DayPart.Night,
+        _ => DayPart.Night
+    };
+
+    private static bool IsWithinRange(TimeSpan time, TimeSpan start, TimeSpan end)
+    {
+        if (end < start)
+        {
+            return time >= start || time <= end;
+        }
+
+        return time >= start && time <= end;
+    }
+
+    private IReadOnlyCollection<TimeSlotDefinitionDto> GetDefinitions()
+    {
+        return TimeSlotDefinitions.Count == 0
+            ? new[]
+            {
+                new TimeSlotDefinitionDto { Key = "Morning", Label = "Mattino", Start = "06:00", End = "10:59" },
+                new TimeSlotDefinitionDto { Key = "Midday", Label = "Mezzo giorno", Start = "11:00", End = "14:59" },
+                new TimeSlotDefinitionDto { Key = "Afternoon", Label = "Pomeriggio", Start = "15:00", End = "19:59" },
+                new TimeSlotDefinitionDto { Key = "Evening", Label = "Sera", Start = "20:00", End = "23:59" },
+                new TimeSlotDefinitionDto { Key = "Night", Label = "Notte", Start = "00:00", End = "05:59" }
+            }
+            : TimeSlotDefinitions;
+    }
+
+    private static bool TryParseTime(string? value, out TimeSpan time)
+    {
+        return TryParseTimeText(value, out time, out _);
+    }
+
+    private static bool TryParseTimeText(string? value, out TimeSpan time, out string normalized)
+    {
+        time = default;
+        normalized = string.Empty;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (!TimeSpan.TryParseExact(trimmed, "HH\\:mm", CultureInfo.InvariantCulture, out time))
+        {
+            return false;
+        }
+
+        normalized = time.ToString("HH\\:mm", CultureInfo.InvariantCulture);
+        return true;
+    }
+
+    private static MarkupString GetDayPartIcon(DayPart part)
+    {
+        var svg = part switch
+        {
+            DayPart.Morning => SvgSunrise,
+            DayPart.Midday => SvgNoon,
+            DayPart.Afternoon => SvgSunset,
+            DayPart.Evening => SvgBed,
+            DayPart.Night => SvgNight,
+            _ => SvgNoon
+        };
+        return new MarkupString(svg);
+    }
+
+    private const string SvgSunrise =
+        "<svg width='20' height='20' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M3 18h18v2H3v-2Zm9-10a5 5 0 0 0-5 5h10a5 5 0 0 0-5-5Zm-1-6h2v4h-2V2Zm-6.36 3.64 1.41-1.41 2.83 2.83-1.41 1.41-2.83-2.83Zm13.9-1.41 1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83Z'/></svg>";
+
+    private const string SvgNoon =
+        "<svg width='20' height='20' viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='12' r='5' fill='currentColor'/><path fill='currentColor' d='M11 2h2v4h-2V2Zm0 16h2v4h-2v-4Zm10-7v2h-4v-2h4ZM7 12v2H3v-2h4Zm9.19-6.19 1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83ZM6.23 16.23l1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83Z'/></svg>";
+
+    private const string SvgSunset =
+        "<svg width='20' height='20' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M3 18h18v2H3v-2Zm9-5a5 5 0 0 0-5 5h10a5 5 0 0 0-5-5Zm-1-11h2v4h-2V2Zm-6.36 3.64 1.41-1.41 2.83 2.83-1.41 1.41-2.83-2.83Zm13.9-1.41 1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83Z'/></svg>";
+
+    private const string SvgBed =
+        "<svg width='20' height='20' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M3 7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3h10a1 1 0 0 1 1 1v6h-2v-2H5v2H3V7Zm2 3h4V7H5v3Zm6 0h8v-2h-8v2Z'/></svg>";
+
+    private const string SvgNight =
+        "<svg width='20' height='20' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M12.5 3a7.5 7.5 0 1 0 8.38 9.9A8 8 0 1 1 12.5 3Z'/></svg>";
+
+    private enum DayPart
+    {
+        Morning,
+        Midday,
+        Afternoon,
+        Evening,
+        Night
+    }
+
     private sealed class ReadingFormModel
     {
         public int Systolic { get; set; } = 120;
         public int Diastolic { get; set; } = 80;
         public int? HeartRate { get; set; }
         public decimal? WeightKg { get; set; }
-        public DateTime TimestampLocal { get; set; } = DateTime.Now;
+        [Required(ErrorMessage = "La data e obbligatoria.")]
+        public DateTime DateLocal { get; set; } = DateTime.Today;
+
+        [Required(ErrorMessage = "L'ora e obbligatoria.")]
+        [RegularExpression("^(?:[01]\\d|2[0-3]):[0-5]\\d$", ErrorMessage = "Formato ora non valido (HH:mm).")]
+        public string TimeLocalText { get; set; } = DateTime.Now.ToString("HH:mm", CultureInfo.InvariantCulture);
         public string? Notes { get; set; }
         public Position Position { get; set; } = Position.Sitting;
         public bool MedicationSkipped { get; set; }
@@ -188,7 +478,8 @@ else
                 Diastolic = response.Diastolic,
                 HeartRate = response.HeartRate,
                 WeightKg = response.WeightKg,
-                TimestampLocal = response.TimestampUtc.ToLocalTime().DateTime,
+                DateLocal = response.TimestampUtc.ToLocalTime().DateTime.Date,
+                TimeLocalText = response.TimestampUtc.ToLocalTime().DateTime.ToString("HH:mm", CultureInfo.InvariantCulture),
                 Notes = response.Notes,
                 Position = response.Position,
                 MedicationSkipped = response.MedicationSkipped,
@@ -206,7 +497,7 @@ else
                 Diastolic = Diastolic,
                 HeartRate = HeartRate,
                 WeightKg = WeightKg,
-                TimestampUtc = new DateTimeOffset(DateTime.SpecifyKind(TimestampLocal, DateTimeKind.Local)).ToUniversalTime(),
+                TimestampUtc = ToUtcTimestamp(),
                 Notes = Notes,
                 Position = Position,
                 MedicationSkipped = MedicationSkipped,
@@ -224,7 +515,7 @@ else
                 Diastolic = Diastolic,
                 HeartRate = HeartRate,
                 WeightKg = WeightKg,
-                TimestampUtc = new DateTimeOffset(DateTime.SpecifyKind(TimestampLocal, DateTimeKind.Local)).ToUniversalTime(),
+                TimestampUtc = ToUtcTimestamp(),
                 Notes = Notes,
                 Position = Position,
                 MedicationSkipped = MedicationSkipped,
@@ -232,6 +523,41 @@ else
                 TimeSlotOptionId = TimeSlotOptionId,
                 SportActivityOptionId = SportActivityOptionId
             };
+        }
+
+        private DateTimeOffset ToUtcTimestamp()
+        {
+            var localDate = DateLocal.Date;
+            var localTime = ParseTimeOrDefault(TimeLocalText);
+            var localDateTime = localDate.Add(localTime);
+            return new DateTimeOffset(DateTime.SpecifyKind(localDateTime, DateTimeKind.Local)).ToUniversalTime();
+        }
+
+        private static TimeSpan ParseTimeOrDefault(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return TimeSpan.Zero;
+            }
+
+            var trimmed = value.Trim();
+            if (TimeSpan.TryParseExact(trimmed, "HH\\:mm", CultureInfo.InvariantCulture, out var time))
+            {
+                return time;
+            }
+
+            if (TimeSpan.TryParseExact(trimmed, "hh\\:mm", CultureInfo.InvariantCulture, out time))
+            {
+                return time;
+            }
+
+            if (DateTime.TryParseExact(trimmed, "h\\:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out var parsed) ||
+                DateTime.TryParseExact(trimmed, "hh\\:mm tt", CultureInfo.InvariantCulture, DateTimeStyles.AllowWhiteSpaces, out parsed))
+            {
+                return parsed.TimeOfDay;
+            }
+
+            return TimeSpan.Zero;
         }
     }
 }

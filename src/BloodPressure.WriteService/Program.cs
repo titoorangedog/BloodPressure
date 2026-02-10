@@ -370,9 +370,12 @@ static List<ImportReadingRow> ParseExcel(IFormFile file, List<string> errors)
         }
     }
 
-    if (!headerMap.ContainsKey(ReadingImportExportColumns.TimestampUtc))
+    var hasTimestamp = headerMap.ContainsKey(ReadingImportExportColumns.TimestampUtc);
+    var hasDate = headerMap.ContainsKey(ReadingImportExportColumns.DateUtc);
+    var hasTime = headerMap.ContainsKey(ReadingImportExportColumns.TimeUtc);
+    if (!hasTimestamp && !(hasDate && hasTime))
     {
-        errors.Add("Colonna TimestampUtc mancante.");
+        errors.Add("Mancano TimestampUtc oppure DateUtc e TimeUtc.");
         return [];
     }
 
@@ -381,7 +384,7 @@ static List<ImportReadingRow> ParseExcel(IFormFile file, List<string> errors)
 
     for (var row = 2; row <= lastRow; row++)
     {
-        var timestamp = ReadDateTimeOffset(sheet, row, headerMap, ReadingImportExportColumns.TimestampUtc, errors);
+        var timestamp = ResolveTimestampFromExcel(sheet, row, headerMap, errors);
         if (!timestamp.HasValue)
         {
             continue;
@@ -449,6 +452,10 @@ static List<ImportReadingRow> ParseXml(IFormFile file, List<string> errors)
     var rows = new List<ImportReadingRow>();
     foreach (var item in exportFile.Readings)
     {
+        var timestamp = item.TimestampUtc == default
+            ? ResolveTimestampFromXml(item, errors)
+            : item.TimestampUtc;
+
         rows.Add(new ImportReadingRow
         {
             Request = new ReadingCreateRequest
@@ -457,7 +464,7 @@ static List<ImportReadingRow> ParseXml(IFormFile file, List<string> errors)
                 Diastolic = item.Diastolic,
                 HeartRate = item.HeartRate,
                 WeightKg = item.WeightKg,
-                TimestampUtc = item.TimestampUtc,
+                TimestampUtc = timestamp,
                 Notes = item.Notes,
                 Position = item.Position,
                 MedicationSkipped = item.MedicationSkipped,
@@ -667,6 +674,72 @@ static DateTimeOffset? ReadDateTimeOffset(
 
     errors.Add($"TimestampUtc non valido alla riga {row}.");
     return null;
+}
+
+static DateTimeOffset? ResolveTimestampFromExcel(
+    IXLWorksheet sheet,
+    int row,
+    IReadOnlyDictionary<string, int> headers,
+    List<string> errors)
+{
+    var timestamp = ReadDateTimeOffset(sheet, row, headers, ReadingImportExportColumns.TimestampUtc, errors);
+    if (timestamp.HasValue)
+    {
+        return timestamp;
+    }
+
+    if (!headers.TryGetValue(ReadingImportExportColumns.DateUtc, out var dateColumn) ||
+        !headers.TryGetValue(ReadingImportExportColumns.TimeUtc, out var timeColumn))
+    {
+        return null;
+    }
+
+    var dateRaw = sheet.Cell(row, dateColumn).GetString();
+    var timeRaw = sheet.Cell(row, timeColumn).GetString();
+    if (string.IsNullOrWhiteSpace(dateRaw) || string.IsNullOrWhiteSpace(timeRaw))
+    {
+        errors.Add($"DateUtc o TimeUtc mancanti alla riga {row}.");
+        return null;
+    }
+
+    if (!DateOnly.TryParse(dateRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+    {
+        errors.Add($"DateUtc non valido alla riga {row}.");
+        return null;
+    }
+
+    if (!TimeOnly.TryParse(timeRaw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
+    {
+        errors.Add($"TimeUtc non valido alla riga {row}.");
+        return null;
+    }
+
+    var combined = date.ToDateTime(time, DateTimeKind.Utc);
+    return new DateTimeOffset(combined);
+}
+
+static DateTimeOffset ResolveTimestampFromXml(ReadingExportItem item, List<string> errors)
+{
+    if (string.IsNullOrWhiteSpace(item.DateUtc) || string.IsNullOrWhiteSpace(item.TimeUtc))
+    {
+        errors.Add("DateUtc o TimeUtc mancanti nel file XML.");
+        return default;
+    }
+
+    if (!DateOnly.TryParse(item.DateUtc, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+    {
+        errors.Add("DateUtc non valido nel file XML.");
+        return default;
+    }
+
+    if (!TimeOnly.TryParse(item.TimeUtc, CultureInfo.InvariantCulture, DateTimeStyles.None, out var time))
+    {
+        errors.Add("TimeUtc non valido nel file XML.");
+        return default;
+    }
+
+    var combined = date.ToDateTime(time, DateTimeKind.Utc);
+    return new DateTimeOffset(combined);
 }
 
 static bool TryReadInt(

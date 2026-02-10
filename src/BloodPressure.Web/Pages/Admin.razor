@@ -44,7 +44,17 @@ else
                 <td>@user.ActiveLicense</td>
                 <td>@FormatLicenseEndDate(user.ActiveLicense, user.LicenseEndDateUtc)</td>
                 <td>
-                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SaveRole(user)">Salva ruolo</button>
+                    <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => SaveRole(user)" disabled="@IsSavingRole(user.Id)">
+                        @if (IsSavingRole(user.Id))
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Salvataggio...</span>
+                        }
+                        else
+                        {
+                            <span>Salva ruolo</span>
+                        }
+                    </button>
                     <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenLicense(user)">Licenza</button>
                     <button class="btn btn-sm btn-outline-info ms-2" @onclick="() => ShowLicenses(user)">Storico licenze</button>
                 </td>
@@ -75,7 +85,17 @@ else
             <label class="form-label">Fine</label>
             <InputDate class="form-control" @bind-Value="LicenseEnd" />
         </div>
-        <button class="btn btn-primary" @onclick="AssignLicense">Assegna</button>
+        <button class="btn btn-primary" @onclick="AssignLicense" disabled="@IsAssigningLicense">
+            @if (IsAssigningLicense)
+            {
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                <span>Salvataggio...</span>
+            }
+            else
+            {
+                <span>Assegna</span>
+            }
+        </button>
     </div>
 }
 
@@ -125,8 +145,18 @@ else
                                 </td>
                                 <td>@(license.IsActive ? "Sì" : "No")</td>
                                 <td class="text-end">
-                                    <button class="btn btn-sm btn-primary me-2" @onclick="() => SaveActiveLicense(license)">Salva</button>
-                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditActiveLicense">Annulla</button>
+                                    <button class="btn btn-sm btn-primary me-2" @onclick="() => SaveActiveLicense(license)" disabled="@IsSavingLicense(license.Id)">
+                                        @if (IsSavingLicense(license.Id))
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            <span>Salvataggio...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Salva</span>
+                                        }
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEditActiveLicense" disabled="@IsSavingLicense(license.Id)">Annulla</button>
                                 </td>
                             }
                             else
@@ -161,6 +191,9 @@ else
     private bool ShowLicenseList { get; set; }
     private UserDetailDto? SelectedUserDetails { get; set; }
     private bool IsEditingActiveLicense { get; set; }
+    private bool IsAssigningLicense { get; set; }
+    private HashSet<Guid> SavingRoleUserIds { get; } = new();
+    private HashSet<Guid> SavingLicenseIds { get; } = new();
     private Guid? EditingLicenseId { get; set; }
     private LicenseType EditLicenseType { get; set; } = LicenseType.Free;
     private DateTime EditLicenseStart { get; set; } = DateTime.Today;
@@ -196,6 +229,11 @@ else
 
     private async Task SaveRole(AdminUserModel user)
     {
+        if (!SavingRoleUserIds.Add(user.Id))
+        {
+            return;
+        }
+
         try
         {
             await ReadApiClient.AssignRoleAsync(user.Id, new AssignRoleRequest { Role = user.Role }, CancellationToken.None);
@@ -205,6 +243,10 @@ else
         {
             ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
             ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
+        finally
+        {
+            SavingRoleUserIds.Remove(user.Id);
         }
     }
 
@@ -265,6 +307,11 @@ else
             return;
         }
 
+        if (!SavingLicenseIds.Add(license.Id))
+        {
+            return;
+        }
+
         try
         {
             await ReadApiClient.UpdateLicenseAsync(SelectedUserDetails.Id, license.Id, new LicenseUpdateRequest
@@ -284,6 +331,10 @@ else
             ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
             ToastService.Show(ex.Message, ToastLevel.Error, 8000);
         }
+        finally
+        {
+            SavingLicenseIds.Remove(license.Id);
+        }
     }
     private async Task AssignLicense()
     {
@@ -292,6 +343,12 @@ else
             return;
         }
 
+        if (IsAssigningLicense)
+        {
+            return;
+        }
+
+        IsAssigningLicense = true;
         try
         {
             await ReadApiClient.AssignLicenseAsync(SelectedUser.Id, new AssignLicenseRequest
@@ -308,6 +365,10 @@ else
             ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
             ToastService.Show(ex.Message, ToastLevel.Error, 8000);
         }
+        finally
+        {
+            IsAssigningLicense = false;
+        }
     }
 
     private async Task ReloadUsersAsync()
@@ -320,6 +381,9 @@ else
             SelectedUser = Users.FirstOrDefault(x => x.Id == SelectedUser.Id);
         }
     }
+
+    private bool IsSavingRole(Guid userId) => SavingRoleUserIds.Contains(userId);
+    private bool IsSavingLicense(Guid licenseId) => SavingLicenseIds.Contains(licenseId);
 
     private static string FormatLicenseEndDate(LicenseType type, DateTimeOffset endUtc)
     {

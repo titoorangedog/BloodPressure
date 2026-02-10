@@ -366,6 +366,17 @@ api.MapPut("/settings/me", async (
     {
         CompactMode = request.UiPreferences.CompactMode
     };
+    settings.TimeSlotDefinitions = request.TimeSlotDefinitions.Count == 0
+        ? BuildDefaultTimeSlotDefinitions()
+        : request.TimeSlotDefinitions
+            .Select(def => new TimeSlotDefinitionEntity
+            {
+                Key = def.Key,
+                Label = def.Label,
+                Start = def.Start,
+                End = def.End
+            })
+            .ToList();
 
     await db.SaveChangesAsync(cancellationToken);
     return Results.Ok(MapSettings(settings));
@@ -595,6 +606,8 @@ static async Task<List<ReadingExportItem>> LoadExportItemsAsync(
             HeartRate = entity.HeartRate,
             WeightKg = entity.WeightKg,
             TimestampUtc = entity.TimestampUtc,
+            DateUtc = entity.TimestampUtc.UtcDateTime.ToString("yyyy-MM-dd"),
+            TimeUtc = entity.TimestampUtc.UtcDateTime.ToString("HH:mm"),
             Notes = entity.Notes,
             Position = entity.Position,
             MedicationSkipped = entity.MedicationSkipped,
@@ -632,6 +645,8 @@ static byte[] BuildExcelExport(IReadOnlyCollection<ReadingExportItem> items)
         var col = 1;
         sheet.Cell(row, col++).Value = item.Id?.ToString();
         sheet.Cell(row, col++).Value = item.TimestampUtc.ToString("O");
+        sheet.Cell(row, col++).Value = item.DateUtc ?? item.TimestampUtc.UtcDateTime.ToString("yyyy-MM-dd");
+        sheet.Cell(row, col++).Value = item.TimeUtc ?? item.TimestampUtc.UtcDateTime.ToString("HH:mm");
         sheet.Cell(row, col++).Value = item.Systolic;
         sheet.Cell(row, col++).Value = item.Diastolic;
         sheet.Cell(row, col++).Value = item.HeartRate;
@@ -706,7 +721,8 @@ static UserSettingsEntity BuildDefaultSettings(Guid userId, ClinicalThresholdsOp
         },
         DashboardPreferences = new DashboardPreferencesEntity { DefaultRangeDays = 30 },
         DefaultSelections = new DefaultSelectionsEntity(),
-        UiPreferences = new UiPreferencesEntity { CompactMode = false }
+        UiPreferences = new UiPreferencesEntity { CompactMode = false },
+        TimeSlotDefinitions = BuildDefaultTimeSlotDefinitions()
     };
 }
 
@@ -744,6 +760,27 @@ static UserSettingsResponse MapSettings(UserSettingsEntity settings)
             TimeSlotOptionId = settings.DefaultSelections.TimeSlotOptionId,
             SportActivityOptionId = settings.DefaultSelections.SportActivityOptionId
         },
-        UiPreferences = new UiPreferencesDto { CompactMode = settings.UiPreferences.CompactMode }
+        UiPreferences = new UiPreferencesDto { CompactMode = settings.UiPreferences.CompactMode },
+        TimeSlotDefinitions = settings.TimeSlotDefinitions
+            .Select(def => new TimeSlotDefinitionDto
+            {
+                Key = def.Key,
+                Label = def.Label,
+                Start = def.Start,
+                End = def.End
+            })
+            .ToList()
+    };
+}
+
+static IReadOnlyCollection<TimeSlotDefinitionEntity> BuildDefaultTimeSlotDefinitions()
+{
+    return new[]
+    {
+        new TimeSlotDefinitionEntity { Key = "Morning", Label = "Mattino", Start = "06:00", End = "10:59" },
+        new TimeSlotDefinitionEntity { Key = "Midday", Label = "Mezzo giorno", Start = "11:00", End = "14:59" },
+        new TimeSlotDefinitionEntity { Key = "Afternoon", Label = "Pomeriggio", Start = "15:00", End = "19:59" },
+        new TimeSlotDefinitionEntity { Key = "Evening", Label = "Sera", Start = "20:00", End = "23:59" },
+        new TimeSlotDefinitionEntity { Key = "Night", Label = "Notte", Start = "00:00", End = "05:59" }
     };
 }

@@ -16,6 +16,7 @@ public sealed record UserSettingsResponse
     public required DashboardPreferencesDto DashboardPreferences { get; init; }
     public required DefaultSelectionsDto DefaultSelections { get; init; }
     public required UiPreferencesDto UiPreferences { get; init; }
+    public IReadOnlyCollection<TimeSlotDefinitionDto> TimeSlotDefinitions { get; init; } = Array.Empty<TimeSlotDefinitionDto>();
 }
 
 public sealed record UserSettingsUpdateRequest
@@ -31,6 +32,7 @@ public sealed record UserSettingsUpdateRequest
     public required DashboardPreferencesDto DashboardPreferences { get; init; }
     public required DefaultSelectionsDto DefaultSelections { get; init; }
     public required UiPreferencesDto UiPreferences { get; init; }
+    public IReadOnlyCollection<TimeSlotDefinitionDto> TimeSlotDefinitions { get; init; } = Array.Empty<TimeSlotDefinitionDto>();
 }
 
 public sealed record ClinicalThresholdsDto
@@ -62,4 +64,12 @@ public sealed record DefaultSelectionsDto
 public sealed record UiPreferencesDto
 {
     public required bool CompactMode { get; init; }
+}
+
+public sealed record TimeSlotDefinitionDto
+{
+    public required string Key { get; init; }
+    public required string Label { get; init; }
+    public required string Start { get; init; }
+    public required string End { get; init; }
 }

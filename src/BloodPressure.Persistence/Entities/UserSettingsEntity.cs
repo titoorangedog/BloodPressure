@@ -14,6 +14,7 @@ public sealed class UserSettingsEntity
     public DashboardPreferencesEntity DashboardPreferences { get; set; } = new();
     public DefaultSelectionsEntity DefaultSelections { get; set; } = new();
     public UiPreferencesEntity UiPreferences { get; set; } = new();
+    public IReadOnlyCollection<TimeSlotDefinitionEntity> TimeSlotDefinitions { get; set; } = Array.Empty<TimeSlotDefinitionEntity>();
 
     public UserEntity? User { get; set; }
 }
@@ -47,4 +48,12 @@ public sealed class DefaultSelectionsEntity
 public sealed class UiPreferencesEntity
 {
     public bool CompactMode { get; set; }
+}
+
+public sealed class TimeSlotDefinitionEntity
+{
+    public string Key { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string Start { get; set; } = "00:00";
+    public string End { get; set; } = "00:00";
 }

@@ -1,12 +1,20 @@
 @page "/readings"
 @using BloodPressure.Shared.Contracts
+@using BloodPressure.Shared.Domain
 @using Microsoft.AspNetCore.Components.Forms
+@using System.Globalization
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
 <h1>Rilevazioni</h1>
+
+<style>
+    .day-separator td {
+        border-top: 2px solid #6c757d;
+    }
+</style>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
     <button class="btn btn-primary" @onclick="CreateNew">Nuova rilevazione</button>
@@ -66,7 +74,8 @@
             <div class="mb-3">
                 <h6 class="mb-2">Campi richiesti</h6>
                 <ul class="mb-0">
-                    <li>TimestampUtc</li>
+                    <li>DateUtc</li>
+                    <li>TimeUtc</li>
                     <li>Systolic</li>
                     <li>Diastolic</li>
                 </ul>
@@ -108,24 +117,43 @@ else
         <thead>
         <tr>
             <th>Data</th>
+            <th>Ora</th>
+            <th>Fascia</th>
             <th>Sistolica</th>
             <th>Diastolica</th>
             <th>FC</th>
             <th>Peso</th>
-            <th>Severità</th>
+            <th>Severita</th>
             <th></th>
         </tr>
         </thead>
         <tbody>
+        @{
+            DateOnly? previousDate = null;
+        }
         @foreach (var reading in ReadingItems)
         {
-            <tr>
-                <td>@reading.TimestampUtc.ToLocalTime():g</td>
+            var currentDate = DateOnly.FromDateTime(ToCet(reading.TimestampUtc).DateTime);
+            var isNewDay = previousDate.HasValue && previousDate.Value != currentDate;
+            previousDate = currentDate;
+            <tr class="@(isNewDay ? "day-separator" : string.Empty)">
+                <td>@FormatCetDate(reading.TimestampUtc)</td>
+                <td>@FormatCetTime(reading.TimestampUtc)</td>
+                <td class="align-middle">
+                    <span class="d-inline-flex align-items-center gap-2 lh-1">
+                        @GetDayPartIcon(GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions()))
+                        <span class="lh-1">@GetTimeSlotLabel(reading)</span>
+                    </span>
+                </td>
                 <td>@reading.Systolic</td>
                 <td>@reading.Diastolic</td>
                 <td>@reading.HeartRate</td>
                 <td>@reading.WeightKg</td>
-                <td>@reading.Severity</td>
+                <td>
+                    <span class="badge @GetSeverityClass(reading.Severity)">
+                        @reading.Severity
+                    </span>
+                </td>
                 <td>
                     <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => Edit(reading.Id)">Modifica</button>
                     <button class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(reading)">Elimina</button>
@@ -147,7 +175,8 @@ else
                 <p>Vuoi eliminare definitivamente la rilevazione selezionata?</p>
                 @if (PendingDeleteTimestampUtc.HasValue)
                 {
-                    <div class="text-muted small">Data: @PendingDeleteTimestampUtc.Value.ToLocalTime():g</div>
+                    <div class="text-muted small">Data: @FormatCetDate(PendingDeleteTimestampUtc.Value)</div>
+                    <div class="text-muted small">Ora: @FormatCetTime(PendingDeleteTimestampUtc.Value)</div>
                 }
             </div>
             <div class="modal-footer">
@@ -163,6 +192,7 @@ else
     private bool IsLoading { get; set; } = true;
     private bool ShowExportPanel { get; set; }
     private bool ShowImportPanel { get; set; }
+    private List<TimeSlotDefinitionDto> TimeSlotDefinitions { get; set; } = new();
     private string? InfoMessage { get; set; }
     private string? SuccessMessage { get; set; }
     private List<string> ErrorMessages { get; set; } = new();
@@ -177,6 +207,8 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
+        TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
         await LoadAsync();
     }
 
@@ -349,4 +381,187 @@ else
         SuccessMessage = null;
         ErrorMessages = new List<string>();
     }
+
+    private string GetTimeSlotLabel(ReadingResponse reading)
+    {
+        return GetDayPartLabel(GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions()));
+    }
+
+    private static readonly CultureInfo CetCulture = CultureInfo.GetCultureInfo("it-IT");
+    private const string CetDateFormat = "dd/MM/yyyy";
+    private const string CetTimeFormat = "HH:mm";
+
+    private static TimeZoneInfo GetCetTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        }
+        catch
+        {
+            try
+            {
+                return TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            }
+            catch
+            {
+                return TimeZoneInfo.Local;
+            }
+        }
+    }
+
+    private static DateTimeOffset ToCet(DateTimeOffset utc)
+        => TimeZoneInfo.ConvertTime(utc, GetCetTimeZone());
+
+    private static string FormatCetDate(DateTimeOffset utc)
+        => ToCet(utc).ToString(CetDateFormat, CetCulture);
+
+    private static string FormatCetTime(DateTimeOffset utc)
+        => ToCet(utc).ToString(CetTimeFormat, CetCulture);
+
+    private static DayPart GetDayPart(TimeSpan time, IReadOnlyCollection<TimeSlotDefinitionDto> definitions)
+    {
+        foreach (var definition in definitions)
+        {
+            if (!TryParseTime(definition.Start, out var start) || !TryParseTime(definition.End, out var end))
+            {
+                continue;
+            }
+
+            if (IsWithinRange(time, start, end))
+            {
+                return GetDayPartFromKey(definition.Key);
+            }
+        }
+
+        return DayPart.Night;
+    }
+
+    private string GetDayPartLabel(DayPart part)
+    {
+        var definition = GetDefinitions().FirstOrDefault(d => GetDayPartFromKey(d.Key) == part);
+        if (!string.IsNullOrWhiteSpace(definition?.Label))
+        {
+            return definition!.Label;
+        }
+
+        return part switch
+        {
+            DayPart.Morning => "Mattino",
+            DayPart.Midday => "Mezzo giorno",
+            DayPart.Afternoon => "Pomeriggio",
+            DayPart.Evening => "Sera",
+            DayPart.Night => "Notte",
+            _ => "Non definito"
+        };
+    }
+
+    private static DayPart GetDayPartFromKey(string? key) => key?.Trim().ToLowerInvariant() switch
+    {
+        "morning" => DayPart.Morning,
+        "midday" => DayPart.Midday,
+        "afternoon" => DayPart.Afternoon,
+        "evening" => DayPart.Evening,
+        "night" => DayPart.Night,
+        _ => DayPart.Night
+    };
+
+    private static bool IsWithinRange(TimeSpan time, TimeSpan start, TimeSpan end)
+    {
+        if (end < start)
+        {
+            return time >= start || time <= end;
+        }
+
+        return time >= start && time <= end;
+    }
+
+    private IReadOnlyCollection<TimeSlotDefinitionDto> GetDefinitions()
+    {
+        return TimeSlotDefinitions.Count == 0
+            ? new[]
+            {
+                new TimeSlotDefinitionDto { Key = "Morning", Label = "Mattino", Start = "06:00", End = "10:59" },
+                new TimeSlotDefinitionDto { Key = "Midday", Label = "Mezzo giorno", Start = "11:00", End = "14:59" },
+                new TimeSlotDefinitionDto { Key = "Afternoon", Label = "Pomeriggio", Start = "15:00", End = "19:59" },
+                new TimeSlotDefinitionDto { Key = "Evening", Label = "Sera", Start = "20:00", End = "23:59" },
+                new TimeSlotDefinitionDto { Key = "Night", Label = "Notte", Start = "00:00", End = "05:59" }
+            }
+            : TimeSlotDefinitions;
+    }
+
+    private static bool TryParseTime(string? value, out TimeSpan time)
+    {
+        time = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim();
+        if (TimeSpan.TryParseExact(trimmed, "hh\\:mm", CultureInfo.InvariantCulture, out time))
+        {
+            return true;
+        }
+
+        if (TimeSpan.TryParseExact(trimmed, "HH\\:mm", CultureInfo.InvariantCulture, out time))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private static MarkupString GetDayPartIcon(DayPart part)
+    {
+        var svg = part switch
+        {
+            DayPart.Morning => SvgSunrise,
+            DayPart.Midday => SvgNoon,
+            DayPart.Afternoon => SvgSunset,
+            DayPart.Evening => SvgBed,
+            DayPart.Night => SvgNight,
+            _ => SvgNoon
+        };
+        return new MarkupString(svg);
+    }
+
+    private const string SvgSunrise =
+        "<svg width='18' height='18' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M3 18h18v2H3v-2Zm9-10a5 5 0 0 0-5 5h10a5 5 0 0 0-5-5Zm-1-6h2v4h-2V2Zm-6.36 3.64 1.41-1.41 2.83 2.83-1.41 1.41-2.83-2.83Zm13.9-1.41 1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83Z'/></svg>";
+
+    private const string SvgNoon =
+        "<svg width='18' height='18' viewBox='0 0 24 24' aria-hidden='true'><circle cx='12' cy='12' r='5' fill='currentColor'/><path fill='currentColor' d='M11 2h2v4h-2V2Zm0 16h2v4h-2v-4Zm10-7v2h-4v-2h4ZM7 12v2H3v-2h4Zm9.19-6.19 1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83ZM6.23 16.23l1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83Z'/></svg>";
+
+    private const string SvgSunset =
+        "<svg width='18' height='18' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M3 18h18v2H3v-2Zm9-5a5 5 0 0 0-5 5h10a5 5 0 0 0-5-5Zm-1-11h2v4h-2V2Zm-6.36 3.64 1.41-1.41 2.83 2.83-1.41 1.41-2.83-2.83Zm13.9-1.41 1.41 1.41-2.83 2.83-1.41-1.41 2.83-2.83Z'/></svg>";
+
+    private const string SvgBed =
+        "<svg width='18' height='18' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M3 7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3h10a1 1 0 0 1 1 1v6h-2v-2H5v2H3V7Zm2 3h4V7H5v3Zm6 0h8v-2h-8v2Z'/></svg>";
+
+    private const string SvgNight =
+        "<svg width='18' height='18' viewBox='0 0 24 24' aria-hidden='true'><path fill='currentColor' d='M12.5 3a7.5 7.5 0 1 0 8.38 9.9A8 8 0 1 1 12.5 3Z'/></svg>";
+
+    private enum DayPart
+    {
+        Morning,
+        Midday,
+        Afternoon,
+        Evening,
+        Night
+    }
+
+    private static string GetSeverityClass(Severity severity)
+    {
+        return severity switch
+        {
+            Severity.Normal => "bg-success text-white",
+            Severity.VeryLow => "bg-danger text-white",
+            Severity.VeryHigh => "bg-danger text-white",
+            Severity.Low => "bg-warning text-dark",
+            Severity.High => "bg-warning text-dark",
+            _ => "bg-secondary text-white"
+        };
+    }
 }
+
+

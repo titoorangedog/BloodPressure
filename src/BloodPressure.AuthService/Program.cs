@@ -186,7 +186,20 @@ static UserSettingsEntity BuildDefaultSettings(Guid userId, ClinicalThresholdsOp
         },
         DashboardPreferences = new DashboardPreferencesEntity { DefaultRangeDays = 30 },
         DefaultSelections = new DefaultSelectionsEntity(),
-        UiPreferences = new UiPreferencesEntity { CompactMode = false }
+        UiPreferences = new UiPreferencesEntity { CompactMode = false },
+        TimeSlotDefinitions = BuildDefaultTimeSlotDefinitions()
+    };
+}
+
+static IReadOnlyCollection<TimeSlotDefinitionEntity> BuildDefaultTimeSlotDefinitions()
+{
+    return new[]
+    {
+        new TimeSlotDefinitionEntity { Key = "Morning", Label = "Mattino", Start = "06:00", End = "10:59" },
+        new TimeSlotDefinitionEntity { Key = "Midday", Label = "Mezzo giorno", Start = "11:00", End = "14:59" },
+        new TimeSlotDefinitionEntity { Key = "Afternoon", Label = "Pomeriggio", Start = "15:00", End = "19:59" },
+        new TimeSlotDefinitionEntity { Key = "Evening", Label = "Sera", Start = "20:00", End = "23:59" },
+        new TimeSlotDefinitionEntity { Key = "Night", Label = "Notte", Start = "00:00", End = "05:59" }
     };
 }
 

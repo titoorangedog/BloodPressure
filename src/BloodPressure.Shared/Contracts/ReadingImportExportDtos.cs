@@ -7,6 +7,8 @@ public sealed record ReadingExportItem
 {
     public Guid? Id { get; init; }
     public DateTimeOffset TimestampUtc { get; init; }
+    public string? DateUtc { get; init; }
+    public string? TimeUtc { get; init; }
     public int Systolic { get; init; }
     public int Diastolic { get; init; }
     public int? HeartRate { get; init; }
@@ -35,6 +37,8 @@ public static class ReadingImportExportColumns
 {
     public const string Id = "Id";
     public const string TimestampUtc = "TimestampUtc";
+    public const string DateUtc = "DateUtc";
+    public const string TimeUtc = "TimeUtc";
     public const string Systolic = "Systolic";
     public const string Diastolic = "Diastolic";
     public const string HeartRate = "HeartRate";
@@ -55,6 +59,8 @@ public static class ReadingImportExportColumns
     [
         Id,
         TimestampUtc,
+        DateUtc,
+        TimeUtc,
         Systolic,
         Diastolic,
         HeartRate,
