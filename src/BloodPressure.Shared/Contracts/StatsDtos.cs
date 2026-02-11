@@ -11,6 +11,7 @@ public sealed record StatsFilterRequest
 public sealed record DashboardStatsResponse
 {
     public required IReadOnlyCollection<BloodPressurePointDto> BloodPressureTrend { get; init; }
+    public required IReadOnlyCollection<MorningEveningBloodPressurePointDto> MorningEveningBloodPressureTrend { get; init; }
     public required IReadOnlyCollection<ChartPointDto> HeartRateTrend { get; init; }
     public required IReadOnlyCollection<ChartPointDto> WeightTrend { get; init; }
     public required IReadOnlyCollection<HistogramBinDto> SeverityHistogram { get; init; }
@@ -22,6 +23,15 @@ public sealed record BloodPressurePointDto
     public required DateOnly Date { get; init; }
     public required decimal Systolic { get; init; }
     public required decimal Diastolic { get; init; }
+}
+
+public sealed record MorningEveningBloodPressurePointDto
+{
+    public required DateOnly Date { get; init; }
+    public decimal? MorningSystolic { get; init; }
+    public decimal? MorningDiastolic { get; init; }
+    public decimal? EveningSystolic { get; init; }
+    public decimal? EveningDiastolic { get; init; }
 }
 
 public sealed record ChartPointDto

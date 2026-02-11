@@ -148,11 +148,14 @@ else
         SportActivityOptions = Array.Empty<OptionItemDto>()
     };
     private List<TimeSlotDefinitionDto> TimeSlotDefinitions { get; set; } = new();
+    private LicenseType? ActiveLicenseType { get; set; }
     private ReadingFormModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
         Options = await ReadApiClient.GetOptionsAsync(CancellationToken.None);
+        var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+        ActiveLicenseType = license?.Type;
         var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
         TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
         EnsureDefaultSportActivity();
@@ -190,10 +193,19 @@ else
             return;
         }
 
+        NormalizeTimeText();
+        UpdateTimeSlotFromTime(false);
+
+        var request = Model.ToCreateRequest();
+        if (ActiveLicenseType == LicenseType.Free && request.TimestampUtc < DateTimeOffset.UtcNow.AddDays(-30))
+        {
+            ToastService.Show("Impossibile salvare a causa delle limitazioni della licenza.", ToastLevel.Error, 7000);
+            return;
+        }
+
         IsSaving = true;
         try
         {
-            var request = Model.ToCreateRequest();
             if (IsEdit && Id.HasValue)
             {
                 await WriteApiClient.UpdateReadingAsync(Id.Value, Model.ToUpdateRequest(), CancellationToken.None);

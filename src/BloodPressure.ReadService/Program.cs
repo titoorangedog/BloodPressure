@@ -94,6 +94,17 @@ api.MapGet("/readings", async (
     CancellationToken cancellationToken) =>
 {
     var userId = user.GetUserId();
+    var nowUtc = DateTimeOffset.UtcNow;
+    var activeLicense = await ResolveActiveLicenseAsync(userId, db, cancellationToken);
+    if (IsFreeLicense(activeLicense, nowUtc))
+    {
+        var freeLookbackStart = nowUtc.AddDays(-30);
+        if (!fromUtc.HasValue || fromUtc.Value < freeLookbackStart)
+        {
+            fromUtc = freeLookbackStart;
+        }
+    }
+
     var query = db.Readings
         .AsNoTracking()
         .Include(x => x.Symptoms)
@@ -795,4 +806,23 @@ static IReadOnlyCollection<TimeSlotDefinitionEntity> BuildDefaultTimeSlotDefinit
         new TimeSlotDefinitionEntity { Key = "Evening", Label = "Sera", Start = "20:00", End = "23:59" },
         new TimeSlotDefinitionEntity { Key = "Night", Label = "Notte", Start = "00:00", End = "05:59" }
     };
+}
+
+static async Task<LicenseEntity?> ResolveActiveLicenseAsync(
+    Guid userId,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken)
+{
+    return await db.Licenses
+        .AsNoTracking()
+        .Where(x => x.UserId == userId && x.IsActive)
+        .OrderByDescending(x => x.EndDateUtc)
+        .FirstOrDefaultAsync(cancellationToken);
+}
+
+static bool IsFreeLicense(LicenseEntity? license, DateTimeOffset nowUtc)
+{
+    return license is not null &&
+           license.Type == LicenseType.Free &&
+           !LicenseCalculator.IsExpired(license.Type, nowUtc, license.EndDateUtc);
 }

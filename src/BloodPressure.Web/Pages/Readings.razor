@@ -35,6 +35,31 @@
     <button class="btn btn-outline-secondary" @onclick="ToggleImportPanel">Importa dati</button>
 </div>
 
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Filtro periodo</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-4">
+                <label class="form-label">Data inizio</label>
+                <InputDate class="form-control" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" min="@GetMinFilterFromDateAttribute()" />
+            </div>
+            <div class="col-12 col-md-4">
+                <label class="form-label">Data fine</label>
+                <InputDate class="form-control" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
+            </div>
+            <div class="col-12 col-md-4">
+                <button class="btn btn-primary w-100" @onclick="ApplyDateFilterAsync" disabled="@IsApplyingFilter">
+                    @if (IsApplyingFilter)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    }
+                    Filtra
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @if (!string.IsNullOrWhiteSpace(InfoMessage))
 {
     <div class="alert alert-info" role="alert">@InfoMessage</div>
@@ -191,8 +216,18 @@ else
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-secondary me-2" @onclick="() => Edit(reading.Id)">Modifica</button>
-                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RequestDelete(reading)">Elimina</button>
+                    <button class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center gap-1" @onclick="() => Edit(reading.Id)" aria-label="Modifica rilevazione" title="Modifica">
+                        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25Zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58ZM20.71 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.5 1.5 3.75 3.75 1.5-1.51Z"/>
+                        </svg>
+                        <span>Modifica</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" @onclick="() => RequestDelete(reading)" aria-label="Elimina rilevazione" title="Elimina">
+                        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2v9H7V9Zm-1 12h12a2 2 0 0 0 2-2V8H4v11a2 2 0 0 0 2 2Z"/>
+                        </svg>
+                        <span>Elimina</span>
+                    </button>
                 </td>
             </tr>
         }
@@ -257,8 +292,12 @@ else
     private IBrowserFile? XmlFile { get; set; }
     private bool IsImportingExcel { get; set; }
     private bool IsImportingXml { get; set; }
+    private bool IsApplyingFilter { get; set; }
     private Guid? PendingDeleteId { get; set; }
     private DateTimeOffset? PendingDeleteTimestampUtc { get; set; }
+    private DateOnly FilterFromDate { get; set; }
+    private DateOnly FilterToDate { get; set; }
+    private LicenseType? ActiveLicenseType { get; set; }
 
     private bool IsImportingAny => IsImportingExcel || IsImportingXml;
     private bool CanImportExcel => ExcelFile is not null && !IsImportingAny;
@@ -266,6 +305,14 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        var todayCet = DateOnly.FromDateTime(ToCet(DateTimeOffset.UtcNow).DateTime);
+        var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+        ActiveLicenseType = license?.Type;
+
+        var minFromDate = ActiveLicenseType == LicenseType.Free ? todayCet.AddDays(-30) : todayCet.AddDays(-180);
+        FilterFromDate = minFromDate;
+        FilterToDate = todayCet;
+
         var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
         TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
         Thresholds = settings.Thresholds;
@@ -275,9 +322,47 @@ else
     private async Task LoadAsync()
     {
         IsLoading = true;
-        var results = await ReadApiClient.GetReadingsAsync(null, null, CancellationToken.None);
+        var (fromUtc, toUtc) = BuildUtcRange(FilterFromDate, FilterToDate);
+        var results = await ReadApiClient.GetReadingsAsync(fromUtc, toUtc, CancellationToken.None);
         ReadingItems = results.ToList();
         IsLoading = false;
+    }
+
+    private async Task ApplyDateFilterAsync()
+    {
+        if (IsApplyingFilter)
+        {
+            return;
+        }
+
+        if (FilterFromDate > FilterToDate)
+        {
+            ClearMessages();
+            InfoMessage = "La data di inizio deve essere precedente o uguale alla data di fine.";
+            return;
+        }
+
+        if (ActiveLicenseType == LicenseType.Free)
+        {
+            var todayCet = DateOnly.FromDateTime(ToCet(DateTimeOffset.UtcNow).DateTime);
+            var minFromDate = todayCet.AddDays(-30);
+            if (FilterFromDate < minFromDate)
+            {
+                FilterFromDate = minFromDate;
+                ClearMessages();
+                InfoMessage = "Con licenza Free puoi visualizzare solo le rilevazioni degli ultimi 30 giorni.";
+            }
+        }
+
+        IsApplyingFilter = true;
+        try
+        {
+            await LoadAsync();
+        }
+        finally
+        {
+            IsApplyingFilter = false;
+        }
     }
 
     private void CreateNew() => Navigation.NavigateTo("/readings/new");
@@ -482,6 +567,27 @@ else
 
     private static DateTimeOffset ToCet(DateTimeOffset utc)
         => TimeZoneInfo.ConvertTime(utc, GetCetTimeZone());
+
+    private static (DateTimeOffset FromUtc, DateTimeOffset ToUtc) BuildUtcRange(DateOnly fromDate, DateOnly toDate)
+    {
+        var timeZone = GetCetTimeZone();
+        var fromLocal = fromDate.ToDateTime(TimeOnly.MinValue);
+        var toLocal = toDate.ToDateTime(TimeOnly.MaxValue);
+        var fromUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(fromLocal, DateTimeKind.Unspecified), timeZone);
+        var toUtc = TimeZoneInfo.ConvertTimeToUtc(DateTime.SpecifyKind(toLocal, DateTimeKind.Unspecified), timeZone);
+        return (new DateTimeOffset(fromUtc), new DateTimeOffset(toUtc));
+    }
+
+    private string? GetMinFilterFromDateAttribute()
+    {
+        if (ActiveLicenseType != LicenseType.Free)
+        {
+            return null;
+        }
+
+        var todayCet = DateOnly.FromDateTime(ToCet(DateTimeOffset.UtcNow).DateTime);
+        return todayCet.AddDays(-30).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    }
 
     private static string FormatCetDate(DateTimeOffset utc)
         => ToCet(utc).ToString(CetDateFormat, CetCulture);
