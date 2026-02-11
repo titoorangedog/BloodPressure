@@ -173,15 +173,19 @@ static UserSettingsEntity BuildDefaultSettings(Guid userId, ClinicalThresholdsOp
             {
                 VeryLowMax = options.Systolic.VeryLowMax,
                 LowMax = options.Systolic.LowMax,
-                NormalMax = options.Systolic.NormalMax,
-                HighMax = options.Systolic.HighMax
+                NormalLowMax = options.Systolic.NormalLowMax,
+                NormalOptimalMax = options.Systolic.NormalOptimalMax,
+                WarningHighMax = options.Systolic.WarningHighMax,
+                VeryHighMin = options.Systolic.VeryHighMin
             },
             Diastolic = new ThresholdSetEntity
             {
                 VeryLowMax = options.Diastolic.VeryLowMax,
                 LowMax = options.Diastolic.LowMax,
-                NormalMax = options.Diastolic.NormalMax,
-                HighMax = options.Diastolic.HighMax
+                NormalLowMax = options.Diastolic.NormalLowMax,
+                NormalOptimalMax = options.Diastolic.NormalOptimalMax,
+                WarningHighMax = options.Diastolic.WarningHighMax,
+                VeryHighMin = options.Diastolic.VeryHighMin
             }
         },
         DashboardPreferences = new DashboardPreferencesEntity { DefaultRangeDays = 30 },

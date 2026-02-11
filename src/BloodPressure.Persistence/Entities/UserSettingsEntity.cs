@@ -29,8 +29,10 @@ public sealed class ThresholdSetEntity
 {
     public int VeryLowMax { get; set; }
     public int LowMax { get; set; }
-    public int NormalMax { get; set; }
-    public int HighMax { get; set; }
+    public int NormalLowMax { get; set; }
+    public int NormalOptimalMax { get; set; }
+    public int WarningHighMax { get; set; }
+    public int VeryHighMin { get; set; }
 }
 
 public sealed class DashboardPreferencesEntity

@@ -212,6 +212,18 @@ readings.MapDelete("/{id:guid}", async (
     return Results.NoContent();
 });
 
+readings.MapDelete("/", async (
+    ClaimsPrincipal user,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken) =>
+{
+    var userId = user.GetUserId();
+    var deleted = await db.Readings
+        .Where(x => x.UserId == userId)
+        .ExecuteDeleteAsync(cancellationToken);
+    return Results.Ok(new { deletedCount = deleted });
+});
+
 readings.MapPost("/import/excel", async (
     IFormFile file,
     ClaimsPrincipal user,
@@ -301,15 +313,19 @@ static async Task<ClinicalThresholdsOptions> ResolveThresholdsAsync(
         {
             VeryLowMax = settings.Thresholds.Systolic.VeryLowMax,
             LowMax = settings.Thresholds.Systolic.LowMax,
-            NormalMax = settings.Thresholds.Systolic.NormalMax,
-            HighMax = settings.Thresholds.Systolic.HighMax
+            NormalLowMax = settings.Thresholds.Systolic.NormalLowMax,
+            NormalOptimalMax = settings.Thresholds.Systolic.NormalOptimalMax,
+            WarningHighMax = settings.Thresholds.Systolic.WarningHighMax,
+            VeryHighMin = settings.Thresholds.Systolic.VeryHighMin
         },
         Diastolic = new ThresholdSet
         {
             VeryLowMax = settings.Thresholds.Diastolic.VeryLowMax,
             LowMax = settings.Thresholds.Diastolic.LowMax,
-            NormalMax = settings.Thresholds.Diastolic.NormalMax,
-            HighMax = settings.Thresholds.Diastolic.HighMax
+            NormalLowMax = settings.Thresholds.Diastolic.NormalLowMax,
+            NormalOptimalMax = settings.Thresholds.Diastolic.NormalOptimalMax,
+            WarningHighMax = settings.Thresholds.Diastolic.WarningHighMax,
+            VeryHighMin = settings.Thresholds.Diastolic.VeryHighMin
         }
     };
 }

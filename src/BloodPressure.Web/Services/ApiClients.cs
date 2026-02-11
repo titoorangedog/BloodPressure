@@ -143,6 +143,15 @@ public sealed class WriteApiClient(HttpClient httpClient)
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task<int> DeleteAllReadingsAsync(CancellationToken cancellationToken)
+    {
+        var response = await httpClient.DeleteAsync("readings", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        var payload = await response.Content.ReadFromJsonAsync<DeleteAllReadingsResponse>(cancellationToken);
+        return payload?.DeletedCount ?? 0;
+    }
+
     public async Task<ImportReadingsResponse> ImportExcelAsync(IBrowserFile file, CancellationToken cancellationToken)
     {
         var response = await UploadFileAsync("readings/import/excel", file, cancellationToken);
@@ -245,6 +254,11 @@ public sealed class WriteApiClient(HttpClient httpClient)
         }
 
         return [];
+    }
+
+    private sealed record DeleteAllReadingsResponse
+    {
+        public int DeletedCount { get; init; }
     }
 }
 

@@ -4,20 +4,20 @@ using BloodPressure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace BloodPressure.Persistence.Migrations
 {
     [DbContext(typeof(BloodPressureDbContext))]
-    partial class BloodPressureDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260210121500_UpdateClinicalThresholdBands")]
+    partial class UpdateClinicalThresholdBands
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
-#pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.2")
+                .HasAnnotation("ProductVersion", "10.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -28,7 +28,10 @@ namespace BloodPressure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTimeOffset>("EndDateUtc")
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EndDateUtc")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<bool>("IsActive")
@@ -59,6 +62,9 @@ namespace BloodPressure.Persistence.Migrations
                     b.Property<int>("ColorKey")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset>("CreatedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<int>("Diastolic")
                         .HasColumnType("int");
 
@@ -69,25 +75,30 @@ namespace BloodPressure.Persistence.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("Position")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Severity")
                         .HasColumnType("int");
 
                     b.Property<int?>("SportActivityOptionId")
                         .HasColumnType("int");
 
-                    b.Property<int>("Systolic")
+                    b.Property<int>("Severity")
                         .HasColumnType("int");
 
-                    b.Property<int?>("TimeSlotOptionId")
+                    b.Property<int>("Systolic")
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("TimestampUtc")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("TimeSlotOptionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TimeSlotName")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
@@ -109,15 +120,15 @@ namespace BloodPressure.Persistence.Migrations
 
             modelBuilder.Entity("BloodPressure.Persistence.Entities.ReadingSymptomEntity", b =>
                 {
-                    b.Property<Guid>("ReadingId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("SymptomOptionId")
                         .HasColumnType("int");
 
-                    b.HasKey("ReadingId", "SymptomOptionId");
+                    b.Property<Guid>("ReadingId")
+                        .HasColumnType("uniqueidentifier");
 
-                    b.HasIndex("SymptomOptionId");
+                    b.HasKey("SymptomOptionId", "ReadingId");
+
+                    b.HasIndex("ReadingId");
 
                     b.ToTable("ReadingSymptoms");
                 });
@@ -128,8 +139,6 @@ namespace BloodPressure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -138,28 +147,6 @@ namespace BloodPressure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SportActivityOptions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "None"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Light"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "Moderate"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "Intense"
-                        });
                 });
 
             modelBuilder.Entity("BloodPressure.Persistence.Entities.SymptomOptionEntity", b =>
@@ -167,8 +154,6 @@ namespace BloodPressure.Persistence.Migrations
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -178,33 +163,6 @@ namespace BloodPressure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SymptomOptions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Headache"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Dizziness"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "Nausea"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "Chest Pain"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "Blurred Vision"
-                        });
                 });
 
             modelBuilder.Entity("BloodPressure.Persistence.Entities.TimeSlotOptionEntity", b =>
@@ -213,43 +171,14 @@ namespace BloodPressure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
 
                     b.HasKey("Id");
 
                     b.ToTable("TimeSlotOptions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Mattino"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Pomeriggio"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "Sera"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = "Notte"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "Mezzo giorno"
-                        });
                 });
 
             modelBuilder.Entity("BloodPressure.Persistence.Entities.UserEntity", b =>
@@ -259,9 +188,8 @@ namespace BloodPressure.Persistence.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTimeOffset>("CreatedAtUtc")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetimeoffset")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
+                        .HasDefaultValueSql("SYSUTCDATETIME()")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -284,24 +212,26 @@ namespace BloodPressure.Persistence.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("datetime2");
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
 
                     b.Property<string>("FirstName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Gender")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<decimal?>("HeightCm")
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
                     b.Property<string>("LastName")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("TimeSlotDefinitions")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("UserId");
@@ -322,7 +252,7 @@ namespace BloodPressure.Persistence.Migrations
 
             modelBuilder.Entity("BloodPressure.Persistence.Entities.ReadingEntity", b =>
                 {
-                    b.HasOne("BloodPressure.Persistence.Entities.SportActivityOptionEntity", "SportActivityOption")
+                    b.HasOne("BloodPressure.Persistence.Entities.SportActivityOptionEntity", "SportActivity")
                         .WithMany()
                         .HasForeignKey("SportActivityOptionId");
 
@@ -336,7 +266,7 @@ namespace BloodPressure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("SportActivityOption");
+                    b.Navigation("SportActivity");
 
                     b.Navigation("TimeSlotOption");
 
@@ -486,13 +416,12 @@ namespace BloodPressure.Persistence.Migrations
                             b1.Property<Guid>("UserSettingsEntityUserId")
                                 .HasColumnType("uniqueidentifier");
 
-                            b1.Property<int?>("SportActivityOptionId")
-                                .HasColumnType("int");
-
-                            b1.Property<string>("SymptomOptionIds")
-                                .IsRequired()
+                            b1.Property<string>("DefaultSymptomOptionIds")
                                 .HasColumnType("nvarchar(max)")
                                 .HasColumnName("DefaultSymptomOptionIds");
+
+                            b1.Property<int?>("SportActivityOptionId")
+                                .HasColumnType("int");
 
                             b1.Property<int?>("TimeSlotOptionId")
                                 .HasColumnType("int");
@@ -534,29 +463,8 @@ namespace BloodPressure.Persistence.Migrations
 
                     b.Navigation("UiPreferences")
                         .IsRequired();
-
-                    b.Navigation("User");
                 });
-
-            modelBuilder.Entity("BloodPressure.Persistence.Entities.ReadingEntity", b =>
-                {
-                    b.Navigation("Symptoms");
-                });
-
-            modelBuilder.Entity("BloodPressure.Persistence.Entities.SymptomOptionEntity", b =>
-                {
-                    b.Navigation("Readings");
-                });
-
-            modelBuilder.Entity("BloodPressure.Persistence.Entities.UserEntity", b =>
-                {
-                    b.Navigation("Licenses");
-
-                    b.Navigation("Readings");
-
-                    b.Navigation("Settings");
-                });
-#pragma warning restore 612, 618
         }
     }
 }
+

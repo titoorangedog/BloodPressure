@@ -1,7 +1,9 @@
 @page "/settings"
 @using BloodPressure.Shared.Contracts
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject BloodPressure.Web.Services.ToastService ToastService
+@inject IJSRuntime JS
 
 <h1>Impostazioni utente</h1>
 
@@ -38,37 +40,48 @@ else
         </div>
 
         <h3>Soglie cliniche</h3>
-        <div class="mb-3">
-            <label class="form-label">Sistolica - VeryLowMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Systolic.VeryLowMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Sistolica - LowMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Systolic.LowMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Sistolica - NormalMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Systolic.NormalMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Sistolica - HighMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Systolic.HighMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Diastolica - VeryLowMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryLowMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Diastolica - LowMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Diastolic.LowMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Diastolica - NormalMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalMax" />
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Diastolica - HighMax</label>
-            <InputNumber class="form-control" @bind-Value="Model.Diastolic.HighMax" />
+        <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+                <thead>
+                <tr>
+                    <th>Fascia</th>
+                    <th>Sistolica (mmHg)</th>
+                    <th>Diastolica (mmHg)</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td><span class="badge bg-danger">PERICOLO BASSA</span></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.VeryLowMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryLowMax" /></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-warning text-dark">WARNING BASSA</span></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.LowMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.LowMax" /></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">NORMALE BASSA</span></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.NormalLowMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalLowMax" /></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-primary">NORMALE OTTIMALE</span></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.NormalOptimalMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalOptimalMax" /></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-warning text-dark">WARNING ALTA (borderline)</span></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.WarningHighMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.WarningHighMax" /></td>
+                </tr>
+                <tr>
+                    <td><span class="badge bg-danger">PERICOLO ALTA</span></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.VeryHighMin" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryHighMin" /></td>
+                </tr>
+                </tbody>
+            </table>
         </div>
 
         <h3>Preferenze dashboard</h3>
@@ -81,6 +94,14 @@ else
         <div class="mb-3">
             <label class="form-label">Compact Mode</label>
             <InputCheckbox class="form-check-input" @bind-Value="Model.CompactMode" />
+        </div>
+
+        <h3 class="text-danger">Danger</h3>
+        <div class="border border-danger rounded p-3 mb-3">
+            <p class="mb-2">Questa azione elimina tutte le rilevazioni. Operazione irreversibile.</p>
+            <button class="btn btn-danger" type="button" @onclick="OpenDeleteModal">
+                Cancella tutte le rilevazioni
+            </button>
         </div>
 
         <button class="btn btn-primary" type="submit" disabled="@IsSaving">
@@ -97,9 +118,46 @@ else
     </EditForm>
 }
 
+<div class="modal fade" id="deleteReadingsModal" tabindex="-1" aria-labelledby="deleteReadingsModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteReadingsModalLabel">Conferma cancellazione</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi" @onclick="CloseDeleteModal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Vuoi cancellare tutte le rilevazioni?</p>
+                <div class="form-check">
+                    <InputCheckbox class="form-check-input" @bind-Value="DeleteConfirmChecked" id="confirmDeleteReadings" />
+                    <label class="form-check-label" for="confirmDeleteReadings">
+                        Confermo di voler eliminare tutte le rilevazioni
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" @onclick="CloseDeleteModal" disabled="@IsDeletingReadings">Annulla</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteReadings"
+                        disabled="@(!DeleteConfirmChecked || IsDeletingReadings)">
+                    @if (IsDeletingReadings)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Cancellazione...</span>
+                    }
+                    else
+                    {
+                        <span>Conferma</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
     private bool IsLoading { get; set; } = true;
     private bool IsSaving { get; set; }
+    private bool IsDeletingReadings { get; set; }
+    private bool DeleteConfirmChecked { get; set; }
     private SettingsFormModel Model { get; set; } = SettingsFormModel.CreateDefault();
 
     protected override async Task OnInitializedAsync()
@@ -134,6 +192,49 @@ else
         }
     }
 
+    private async Task OpenDeleteModal()
+    {
+        DeleteConfirmChecked = false;
+        IsDeletingReadings = false;
+        await JS.InvokeVoidAsync("bpModal.show", "deleteReadingsModal");
+    }
+
+    private async Task CloseDeleteModal()
+    {
+        if (IsDeletingReadings)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("bpModal.hide", "deleteReadingsModal");
+    }
+
+    private async Task ConfirmDeleteReadings()
+    {
+        if (!DeleteConfirmChecked || IsDeletingReadings)
+        {
+            return;
+        }
+
+        IsDeletingReadings = true;
+        try
+        {
+            await WriteApiClient.DeleteAllReadingsAsync(CancellationToken.None);
+            await JS.InvokeVoidAsync("bpModal.hide", "deleteReadingsModal");
+            ToastService.Show("Rilevazioni cancellate", ToastLevel.Success);
+        }
+        catch (Exception ex)
+        {
+            ToastService.Show("Errore durante la cancellazione", ToastLevel.Error, 6000);
+            ToastService.Show(ex.Message, ToastLevel.Error, 8000);
+        }
+        finally
+        {
+            IsDeletingReadings = false;
+            DeleteConfirmChecked = false;
+        }
+    }
+
     private sealed class SettingsFormModel
     {
         public string? FirstName { get; set; }
@@ -153,8 +254,24 @@ else
         {
             return new SettingsFormModel
             {
-                Systolic = new ThresholdSetFormModel { VeryLowMax = 90, LowMax = 100, NormalMax = 130, HighMax = 150 },
-                Diastolic = new ThresholdSetFormModel { VeryLowMax = 60, LowMax = 70, NormalMax = 85, HighMax = 95 },
+                Systolic = new ThresholdSetFormModel
+                {
+                    VeryLowMax = 79,
+                    LowMax = 99,
+                    NormalLowMax = 109,
+                    NormalOptimalMax = 120,
+                    WarningHighMax = 139,
+                    VeryHighMin = 180
+                },
+                Diastolic = new ThresholdSetFormModel
+                {
+                    VeryLowMax = 49,
+                    LowMax = 59,
+                    NormalLowMax = 69,
+                    NormalOptimalMax = 80,
+                    WarningHighMax = 89,
+                    VeryHighMin = 120
+                },
                 DefaultRangeDays = 30,
                 CompactMode = false,
                 TimeSlotDefinitions = TimeSlotDefinitionFormModel.BuildDefaults()
@@ -204,8 +321,10 @@ else
     {
         public int VeryLowMax { get; set; }
         public int LowMax { get; set; }
-        public int NormalMax { get; set; }
-        public int HighMax { get; set; }
+        public int NormalLowMax { get; set; }
+        public int NormalOptimalMax { get; set; }
+        public int WarningHighMax { get; set; }
+        public int VeryHighMin { get; set; }
 
         public static ThresholdSetFormModel FromDto(ThresholdSetDto dto)
         {
@@ -213,8 +332,10 @@ else
             {
                 VeryLowMax = dto.VeryLowMax,
                 LowMax = dto.LowMax,
-                NormalMax = dto.NormalMax,
-                HighMax = dto.HighMax
+                NormalLowMax = dto.NormalLowMax,
+                NormalOptimalMax = dto.NormalOptimalMax,
+                WarningHighMax = dto.WarningHighMax,
+                VeryHighMin = dto.VeryHighMin
             };
         }
 
@@ -224,8 +345,10 @@ else
             {
                 VeryLowMax = VeryLowMax,
                 LowMax = LowMax,
-                NormalMax = NormalMax,
-                HighMax = HighMax
+                NormalLowMax = NormalLowMax,
+                NormalOptimalMax = NormalOptimalMax,
+                WarningHighMax = WarningHighMax,
+                VeryHighMin = VeryHighMin
             };
         }
     }

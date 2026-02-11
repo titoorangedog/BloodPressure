@@ -14,6 +14,19 @@
     .day-separator td {
         border-top: 2px solid #6c757d;
     }
+
+    .panel-close {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        border: 0;
+        background: transparent;
+        color: #212529;
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0;
+    }
 </style>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
@@ -48,7 +61,11 @@
 @if (ShowExportPanel)
 {
     <div class="card mb-3">
-        <div class="card-body">
+        <div class="card-body position-relative">
+            <button type="button"
+                    class="panel-close"
+                    aria-label="Chiudi pannello export"
+                    @onclick="HideExportPanel">&times;</button>
             <h5 class="card-title">Esporta rilevazioni</h5>
             <p class="card-text">Scarica tutte le rilevazioni in formato Excel o XML.</p>
             <div class="d-flex flex-wrap gap-2">
@@ -68,7 +85,11 @@
 @if (ShowImportPanel)
 {
     <div class="card mb-3">
-        <div class="card-body">
+        <div class="card-body position-relative">
+            <button type="button"
+                    class="panel-close"
+                    aria-label="Chiudi pannello import"
+                    @onclick="HideImportPanel">&times;</button>
             <h5 class="card-title">Importa rilevazioni</h5>
             <p class="card-text">Carica un file Excel o XML con tutte le informazioni delle rilevazioni.</p>
             <div class="mb-3">
@@ -88,14 +109,26 @@
                     <div class="border rounded p-3 h-100">
                         <h6 class="mb-2">Excel</h6>
                         <InputFile OnChange="HandleExcelSelected" accept=".xlsx,.xls" class="form-control" />
-                        <button class="btn btn-primary mt-2" @onclick="ImportExcel" disabled="@(!CanImportExcel)">Carica Excel</button>
+                        <button class="btn btn-primary mt-2" @onclick="ImportExcel" disabled="@(!CanImportExcel || IsImportingExcel)">
+                            @if (IsImportingExcel)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Carica Excel
+                        </button>
                     </div>
                 </div>
                 <div class="col-12 col-lg-6">
                     <div class="border rounded p-3 h-100">
                         <h6 class="mb-2">XML</h6>
                         <InputFile OnChange="HandleXmlSelected" accept=".xml" class="form-control" />
-                        <button class="btn btn-primary mt-2" @onclick="ImportXml" disabled="@(!CanImportXml)">Carica XML</button>
+                        <button class="btn btn-primary mt-2" @onclick="ImportXml" disabled="@(!CanImportXml || IsImportingXml)">
+                            @if (IsImportingXml)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Carica XML
+                        </button>
                     </div>
                 </div>
             </div>
@@ -150,8 +183,11 @@ else
                 <td>@reading.HeartRate</td>
                 <td>@reading.WeightKg</td>
                 <td>
-                    <span class="badge @GetSeverityClass(reading.Severity)">
-                        @reading.Severity
+                    <span class="badge me-2 @GetSeverityClass(ClassifyValue(reading.Systolic, Thresholds.Systolic))">
+                        S: @ClassifyValue(reading.Systolic, Thresholds.Systolic)
+                    </span>
+                    <span class="badge @GetSeverityClass(ClassifyValue(reading.Diastolic, Thresholds.Diastolic))">
+                        D: @ClassifyValue(reading.Diastolic, Thresholds.Diastolic)
                     </span>
                 </td>
                 <td>
@@ -193,22 +229,46 @@ else
     private bool ShowExportPanel { get; set; }
     private bool ShowImportPanel { get; set; }
     private List<TimeSlotDefinitionDto> TimeSlotDefinitions { get; set; } = new();
+    private ClinicalThresholdsDto Thresholds { get; set; } = new()
+    {
+        Systolic = new ThresholdSetDto
+        {
+            VeryLowMax = 79,
+            LowMax = 99,
+            NormalLowMax = 109,
+            NormalOptimalMax = 120,
+            WarningHighMax = 139,
+            VeryHighMin = 180
+        },
+        Diastolic = new ThresholdSetDto
+        {
+            VeryLowMax = 49,
+            LowMax = 59,
+            NormalLowMax = 69,
+            NormalOptimalMax = 80,
+            WarningHighMax = 89,
+            VeryHighMin = 120
+        }
+    };
     private string? InfoMessage { get; set; }
     private string? SuccessMessage { get; set; }
     private List<string> ErrorMessages { get; set; } = new();
     private IBrowserFile? ExcelFile { get; set; }
     private IBrowserFile? XmlFile { get; set; }
-    private bool IsImporting { get; set; }
+    private bool IsImportingExcel { get; set; }
+    private bool IsImportingXml { get; set; }
     private Guid? PendingDeleteId { get; set; }
     private DateTimeOffset? PendingDeleteTimestampUtc { get; set; }
 
-    private bool CanImportExcel => ExcelFile is not null && !IsImporting;
-    private bool CanImportXml => XmlFile is not null && !IsImporting;
+    private bool IsImportingAny => IsImportingExcel || IsImportingXml;
+    private bool CanImportExcel => ExcelFile is not null && !IsImportingAny;
+    private bool CanImportXml => XmlFile is not null && !IsImportingAny;
 
     protected override async Task OnInitializedAsync()
     {
         var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
         TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
+        Thresholds = settings.Thresholds;
         await LoadAsync();
     }
 
@@ -255,6 +315,11 @@ else
         ClearMessages();
     }
 
+    private void HideExportPanel()
+    {
+        ShowExportPanel = false;
+    }
+
     private void ToggleImportPanel()
     {
         ShowImportPanel = !ShowImportPanel;
@@ -263,6 +328,11 @@ else
             ShowExportPanel = false;
         }
         ClearMessages();
+    }
+
+    private void HideImportPanel()
+    {
+        ShowImportPanel = false;
     }
 
     private void ExportExcel()
@@ -323,7 +393,7 @@ else
         }
 
         ClearMessages();
-        IsImporting = true;
+        IsImportingExcel = true;
         try
         {
             var result = await WriteApiClient.ImportExcelAsync(ExcelFile, CancellationToken.None);
@@ -340,7 +410,7 @@ else
         }
         finally
         {
-            IsImporting = false;
+            IsImportingExcel = false;
         }
     }
 
@@ -354,7 +424,7 @@ else
         }
 
         ClearMessages();
-        IsImporting = true;
+        IsImportingXml = true;
         try
         {
             var result = await WriteApiClient.ImportXmlAsync(XmlFile, CancellationToken.None);
@@ -371,7 +441,7 @@ else
         }
         finally
         {
-            IsImporting = false;
+            IsImportingXml = false;
         }
     }
 
@@ -561,6 +631,17 @@ else
             Severity.High => "bg-warning text-dark",
             _ => "bg-secondary text-white"
         };
+    }
+
+    private static Severity ClassifyValue(int value, ThresholdSetDto thresholds)
+    {
+        if (value <= thresholds.VeryLowMax) return Severity.VeryLow;
+        if (value <= thresholds.LowMax) return Severity.Low;
+        if (value <= thresholds.NormalLowMax) return Severity.Normal;
+        if (value <= thresholds.NormalOptimalMax) return Severity.Normal;
+        if (value <= thresholds.WarningHighMax) return Severity.High;
+        if (value >= thresholds.VeryHighMin) return Severity.VeryHigh;
+        return Severity.High;
     }
 }
 

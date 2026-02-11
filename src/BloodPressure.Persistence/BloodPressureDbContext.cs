@@ -74,15 +74,19 @@ public sealed class BloodPressureDbContext(DbContextOptions<BloodPressureDbConte
                 {
                     set.Property(p => p.VeryLowMax).HasColumnName("SystolicVeryLowMax");
                     set.Property(p => p.LowMax).HasColumnName("SystolicLowMax");
-                    set.Property(p => p.NormalMax).HasColumnName("SystolicNormalMax");
-                    set.Property(p => p.HighMax).HasColumnName("SystolicHighMax");
+                    set.Property(p => p.NormalLowMax).HasColumnName("SystolicNormalLowMax");
+                    set.Property(p => p.NormalOptimalMax).HasColumnName("SystolicNormalOptimalMax");
+                    set.Property(p => p.WarningHighMax).HasColumnName("SystolicWarningHighMax");
+                    set.Property(p => p.VeryHighMin).HasColumnName("SystolicVeryHighMin");
                 });
                 thresholds.OwnsOne(t => t.Diastolic, set =>
                 {
                     set.Property(p => p.VeryLowMax).HasColumnName("DiastolicVeryLowMax");
                     set.Property(p => p.LowMax).HasColumnName("DiastolicLowMax");
-                    set.Property(p => p.NormalMax).HasColumnName("DiastolicNormalMax");
-                    set.Property(p => p.HighMax).HasColumnName("DiastolicHighMax");
+                    set.Property(p => p.NormalLowMax).HasColumnName("DiastolicNormalLowMax");
+                    set.Property(p => p.NormalOptimalMax).HasColumnName("DiastolicNormalOptimalMax");
+                    set.Property(p => p.WarningHighMax).HasColumnName("DiastolicWarningHighMax");
+                    set.Property(p => p.VeryHighMin).HasColumnName("DiastolicVeryHighMin");
                 });
             });
 
