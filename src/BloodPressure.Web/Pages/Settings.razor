@@ -1,5 +1,6 @@
 @page "/settings"
 @using BloodPressure.Shared.Contracts
+@using BloodPressure.Shared.Domain
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject BloodPressure.Web.Services.ToastService ToastService
@@ -52,37 +53,43 @@ else
                 <tbody>
                 <tr>
                     <td><span class="badge bg-danger">PERICOLO BASSA</span></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.VeryLowMax" /></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryLowMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.VeryLowMax" disabled="@AreClinicalThresholdsLocked" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryLowMax" disabled="@AreClinicalThresholdsLocked" /></td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-warning text-dark">WARNING BASSA</span></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.LowMax" /></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.LowMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.LowMax" disabled="@AreClinicalThresholdsLocked" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.LowMax" disabled="@AreClinicalThresholdsLocked" /></td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-primary">NORMALE BASSA</span></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.NormalLowMax" /></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalLowMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.NormalLowMax" disabled="@AreClinicalThresholdsLocked" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalLowMax" disabled="@AreClinicalThresholdsLocked" /></td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-primary">NORMALE OTTIMALE</span></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.NormalOptimalMax" /></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalOptimalMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.NormalOptimalMax" disabled="@AreClinicalThresholdsLocked" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.NormalOptimalMax" disabled="@AreClinicalThresholdsLocked" /></td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-warning text-dark">WARNING ALTA (borderline)</span></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.WarningHighMax" /></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.WarningHighMax" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.WarningHighMax" disabled="@AreClinicalThresholdsLocked" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.WarningHighMax" disabled="@AreClinicalThresholdsLocked" /></td>
                 </tr>
                 <tr>
                     <td><span class="badge bg-danger">PERICOLO ALTA</span></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.VeryHighMin" /></td>
-                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryHighMin" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Systolic.VeryHighMin" disabled="@AreClinicalThresholdsLocked" /></td>
+                    <td><InputNumber class="form-control" @bind-Value="Model.Diastolic.VeryHighMin" disabled="@AreClinicalThresholdsLocked" /></td>
                 </tr>
                 </tbody>
             </table>
         </div>
+        @if (AreClinicalThresholdsLocked)
+        {
+            <div class="alert alert-warning mb-3" role="alert">
+                Le soglie cliniche non sono modificabili con licenza Free. Passa a una licenza Advanced o Premium per personalizzarle.
+            </div>
+        }
 
         <h3>Preferenze dashboard</h3>
         <div class="mb-3">
@@ -158,10 +165,14 @@ else
     private bool IsSaving { get; set; }
     private bool IsDeletingReadings { get; set; }
     private bool DeleteConfirmChecked { get; set; }
+    private LicenseType? ActiveLicenseType { get; set; }
+    private bool AreClinicalThresholdsLocked => ActiveLicenseType == LicenseType.Free;
     private SettingsFormModel Model { get; set; } = SettingsFormModel.CreateDefault();
 
     protected override async Task OnInitializedAsync()
     {
+        var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+        ActiveLicenseType = license?.Type;
         var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
         Model = SettingsFormModel.FromResponse(settings);
         IsLoading = false;

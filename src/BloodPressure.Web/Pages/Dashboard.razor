@@ -1,6 +1,7 @@
 @page "/dashboard"
 @using BloodPressure.Shared.Contracts
 @using BloodPressure.Shared.Domain
+@using Microsoft.AspNetCore.Components.Forms
 @inject BloodPressure.Web.Services.StatsApiClient StatsApiClient
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject IJSRuntime Js
@@ -21,9 +22,44 @@ else
     {
         <div class="alert alert-info">@Notice</div>
     }
+    @if (CanCustomizeDateRange)
+    {
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Filtro periodo</h5>
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Data inizio</label>
+                        <InputDate class="form-control" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">Data fine</label>
+                        <InputDate class="form-control" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <button class="btn btn-primary w-100" @onclick="ApplyDateFilterAsync" disabled="@IsApplyingFilter">
+                            @if (IsApplyingFilter)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            }
+                            Filtra
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
     <div class="mb-4 chart-container">
         <canvas id="bpChart"></canvas>
     </div>
+    <h5>Confronto Mattino/Sera</h5>
+    <div class="mb-4 chart-container">
+        <canvas id="bpMorningEveningChart"></canvas>
+    </div>
+    @if (!HasMorningEveningData)
+    {
+        <div class="alert alert-secondary mb-4">Nessun dato disponibile per le fasce Mattino/Sera nel periodo selezionato.</div>
+    }
     <div class="mb-4 chart-container">
         <canvas id="weightChart"></canvas>
     </div>
@@ -42,27 +78,41 @@ else
 
 @code {
     private bool IsLoading { get; set; } = true;
+    private bool IsApplyingFilter { get; set; }
     private string Error { get; set; } = string.Empty;
     private string Notice { get; set; } = string.Empty;
     private DashboardStatsResponse? Stats { get; set; }
-    private bool chartsRendered;
+    private bool chartRenderPending;
+    private LicenseType? ActiveLicenseType { get; set; }
+    private DateOnly FilterFromDate { get; set; }
+    private DateOnly FilterToDate { get; set; }
+    private bool CanCustomizeDateRange =>
+        ActiveLicenseType is LicenseType.Advanced or LicenseType.Premium;
+    private bool HasMorningEveningData =>
+        Stats?.MorningEveningBloodPressureTrend.Any(x =>
+            x.MorningSystolic.HasValue ||
+            x.MorningDiastolic.HasValue ||
+            x.EveningSystolic.HasValue ||
+            x.EveningDiastolic.HasValue) == true;
 
     protected override async Task OnInitializedAsync()
     {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        FilterFromDate = today.AddDays(-180);
+        FilterToDate = today;
+
         try
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
             var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+            ActiveLicenseType = license?.Type;
             if (license?.Type == LicenseType.Free)
             {
                 Notice = "Licenza Free: le statistiche sono limitate agli ultimi 30 giorni.";
             }
-            var request = new StatsFilterRequest
-            {
-                FromDate = today.AddDays(-30),
-                ToDate = today
-            };
-            Stats = await StatsApiClient.GetDashboardAsync(request, CancellationToken.None);
+
+            var fromDate = CanCustomizeDateRange ? FilterFromDate : today.AddDays(-30);
+            var toDate = CanCustomizeDateRange ? FilterToDate : today;
+            await LoadDashboardAsync(fromDate, toDate);
         }
         catch
         {
@@ -76,7 +126,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (Stats is null || chartsRendered)
+        if (Stats is null || !chartRenderPending)
         {
             return;
         }
@@ -94,6 +144,33 @@ else
                 new { label = "Diastolica", data = diastolic, borderColor = "orange" }
             },
             "Pressione nel tempo");
+
+        var morningEveningTrend = Stats.MorningEveningBloodPressureTrend
+            .Where(x =>
+                x.MorningSystolic.HasValue ||
+                x.MorningDiastolic.HasValue ||
+                x.EveningSystolic.HasValue ||
+                x.EveningDiastolic.HasValue)
+            .ToArray();
+        var meLabels = morningEveningTrend
+            .Select(x => x.Date.ToString("yyyy-MM-dd"))
+            .ToArray();
+        var morningSystolic = morningEveningTrend.Select(x => x.MorningSystolic.HasValue ? (double?)x.MorningSystolic.Value : null).ToArray();
+        var eveningSystolic = morningEveningTrend.Select(x => x.EveningSystolic.HasValue ? (double?)x.EveningSystolic.Value : null).ToArray();
+        var morningDiastolic = morningEveningTrend.Select(x => x.MorningDiastolic.HasValue ? (double?)x.MorningDiastolic.Value : null).ToArray();
+        var eveningDiastolic = morningEveningTrend.Select(x => x.EveningDiastolic.HasValue ? (double?)x.EveningDiastolic.Value : null).ToArray();
+
+        await Js.InvokeVoidAsync("bpCharts.renderLineChart",
+            "bpMorningEveningChart",
+            meLabels,
+            new object[]
+            {
+                new { label = "Sistolica Mattino", data = morningSystolic, borderColor = "#d9534f" },
+                new { label = "Sistolica Sera", data = eveningSystolic, borderColor = "#8b0000" },
+                new { label = "Diastolica Mattino", data = morningDiastolic, borderColor = "#f0ad4e" },
+                new { label = "Diastolica Sera", data = eveningDiastolic, borderColor = "#b36b00" }
+            },
+            "Confronto Mattino/Sera");
 
         var weightTrend = Stats.WeightTrend
             .Where(x => x.Value > 0)
@@ -122,6 +199,49 @@ else
             },
             "Trend battiti");
 
-        chartsRendered = true;
+        chartRenderPending = false;
+        if (IsApplyingFilter)
+        {
+            IsApplyingFilter = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ApplyDateFilterAsync()
+    {
+        if (!CanCustomizeDateRange || IsApplyingFilter)
+        {
+            return;
+        }
+
+        if (FilterFromDate > FilterToDate)
+        {
+            Error = "La data di inizio deve essere precedente o uguale alla data di fine.";
+            return;
+        }
+
+        IsApplyingFilter = true;
+        Error = string.Empty;
+        try
+        {
+            await LoadDashboardAsync(FilterFromDate, FilterToDate);
+        }
+        catch
+        {
+            Error = "Impossibile caricare la dashboard. Verifica la licenza o riprova.";
+            IsApplyingFilter = false;
+        }
+    }
+
+    private async Task LoadDashboardAsync(DateOnly fromDate, DateOnly toDate)
+    {
+        var request = new StatsFilterRequest
+        {
+            FromDate = fromDate,
+            ToDate = toDate
+        };
+
+        Stats = await StatsApiClient.GetDashboardAsync(request, CancellationToken.None);
+        chartRenderPending = true;
     }
 }

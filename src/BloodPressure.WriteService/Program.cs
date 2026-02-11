@@ -104,9 +104,17 @@ readings.MapPost("/", async (
     }
 
     var userId = user.GetUserId();
+    var nowUtc = DateTimeOffset.UtcNow;
+    var activeLicense = await ResolveActiveLicenseAsync(userId, db, cancellationToken);
+    if (IsFreeLicense(activeLicense, nowUtc) && request.TimestampUtc < nowUtc.AddDays(-30))
+    {
+        return Results.BadRequest(new { errors = new[] { "Con licenza Free non puoi inserire rilevazioni precedenti agli ultimi 30 giorni." } });
+    }
+
     var effectiveThresholds = await ResolveThresholdsAsync(userId, db, thresholds, cancellationToken);
 
     var (severity, colorKey) = ClinicalClassification.Classify(request.Systolic, request.Diastolic, effectiveThresholds);
+    var timeSlotOptionId = await ResolveTimeSlotOptionIdAsync(request.TimestampUtc, db, cancellationToken);
 
     var entity = new ReadingEntity
     {
@@ -122,7 +130,7 @@ readings.MapPost("/", async (
         MedicationSkipped = request.MedicationSkipped,
         Severity = severity,
         ColorKey = colorKey,
-        TimeSlotOptionId = request.TimeSlotOptionId,
+        TimeSlotOptionId = timeSlotOptionId,
         SportActivityOptionId = request.SportActivityOptionId
     };
 
@@ -162,6 +170,13 @@ readings.MapPut("/{id:guid}", async (
     }
 
     var userId = user.GetUserId();
+    var nowUtc = DateTimeOffset.UtcNow;
+    var activeLicense = await ResolveActiveLicenseAsync(userId, db, cancellationToken);
+    if (IsFreeLicense(activeLicense, nowUtc) && request.TimestampUtc < nowUtc.AddDays(-30))
+    {
+        return Results.BadRequest(new { errors = new[] { "Con licenza Free non puoi salvare rilevazioni precedenti agli ultimi 30 giorni." } });
+    }
+
     var entity = await db.Readings
         .Include(x => x.Symptoms)
         .SingleOrDefaultAsync(x => x.Id == id && x.UserId == userId, cancellationToken);
@@ -173,6 +188,7 @@ readings.MapPut("/{id:guid}", async (
 
     var effectiveThresholds = await ResolveThresholdsAsync(userId, db, thresholds, cancellationToken);
     var (severity, colorKey) = ClinicalClassification.Classify(request.Systolic, request.Diastolic, effectiveThresholds);
+    var timeSlotOptionId = await ResolveTimeSlotOptionIdAsync(request.TimestampUtc, db, cancellationToken);
 
     entity.Systolic = request.Systolic;
     entity.Diastolic = request.Diastolic;
@@ -184,7 +200,7 @@ readings.MapPut("/{id:guid}", async (
     entity.MedicationSkipped = request.MedicationSkipped;
     entity.Severity = severity;
     entity.ColorKey = colorKey;
-    entity.TimeSlotOptionId = request.TimeSlotOptionId;
+    entity.TimeSlotOptionId = timeSlotOptionId;
     entity.SportActivityOptionId = request.SportActivityOptionId;
 
     entity.Symptoms.Clear();
@@ -293,6 +309,25 @@ static async Task AttachSymptomsAsync(
     {
         entity.Symptoms.Add(new ReadingSymptomEntity { ReadingId = entity.Id, SymptomOptionId = id });
     }
+}
+
+static async Task<LicenseEntity?> ResolveActiveLicenseAsync(
+    Guid userId,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken)
+{
+    return await db.Licenses
+        .AsNoTracking()
+        .Where(x => x.UserId == userId && x.IsActive)
+        .OrderByDescending(x => x.EndDateUtc)
+        .FirstOrDefaultAsync(cancellationToken);
+}
+
+static bool IsFreeLicense(LicenseEntity? license, DateTimeOffset nowUtc)
+{
+    return license is not null &&
+           license.Type == LicenseType.Free &&
+           !LicenseCalculator.IsExpired(license.Type, nowUtc, license.EndDateUtc);
 }
 
 static async Task<ClinicalThresholdsOptions> ResolveThresholdsAsync(
@@ -506,6 +541,10 @@ static async Task<IResult> ImportReadingsAsync(
 {
     var errors = new List<string>();
     var userId = user.GetUserId();
+    var nowUtc = DateTimeOffset.UtcNow;
+    var activeLicense = await ResolveActiveLicenseAsync(userId, db, cancellationToken);
+    var freeLookbackStart = nowUtc.AddDays(-30);
+    var isFreeLicense = IsFreeLicense(activeLicense, nowUtc);
     var effectiveThresholds = await ResolveThresholdsAsync(userId, db, thresholds, cancellationToken);
     var entities = new List<ReadingEntity>();
     var totalCount = rows.Count;
@@ -607,6 +646,12 @@ static async Task<IResult> ImportReadingsAsync(
         if (!ReadingValidator.TryValidate(request, out var error))
         {
             errors.Add($"Riga {i + 2}: {error}");
+            continue;
+        }
+
+        if (isFreeLicense && request.TimestampUtc < freeLookbackStart)
+        {
+            errors.Add($"Riga {i + 2}: con licenza Free sono consentite solo rilevazioni degli ultimi 30 giorni.");
             continue;
         }
 
@@ -756,6 +801,49 @@ static DateTimeOffset ResolveTimestampFromXml(ReadingExportItem item, List<strin
 
     var combined = date.ToDateTime(time, DateTimeKind.Utc);
     return new DateTimeOffset(combined);
+}
+
+static async Task<int?> ResolveTimeSlotOptionIdAsync(
+    DateTimeOffset timestampUtc,
+    BloodPressureDbContext db,
+    CancellationToken cancellationToken)
+{
+    var localTime = ToCet(timestampUtc).TimeOfDay;
+    var slotName = localTime switch
+    {
+        var t when t >= new TimeSpan(6, 0, 0) && t <= new TimeSpan(10, 59, 59) => "Mattino",
+        var t when t >= new TimeSpan(11, 0, 0) && t <= new TimeSpan(14, 59, 59) => "Mezzo giorno",
+        var t when t >= new TimeSpan(15, 0, 0) && t <= new TimeSpan(19, 59, 59) => "Pomeriggio",
+        var t when t >= new TimeSpan(20, 0, 0) && t <= new TimeSpan(23, 59, 59) => "Sera",
+        _ => "Notte"
+    };
+
+    return await db.TimeSlotOptions
+        .AsNoTracking()
+        .Where(x => x.Name == slotName)
+        .Select(x => (int?)x.Id)
+        .FirstOrDefaultAsync(cancellationToken);
+}
+
+static DateTimeOffset ToCet(DateTimeOffset utc)
+{
+    try
+    {
+        var cet = TimeZoneInfo.FindSystemTimeZoneById("Europe/Rome");
+        return TimeZoneInfo.ConvertTime(utc, cet);
+    }
+    catch
+    {
+        try
+        {
+            var cetWindows = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+            return TimeZoneInfo.ConvertTime(utc, cetWindows);
+        }
+        catch
+        {
+            return utc;
+        }
+    }
 }
 
 static bool TryReadInt(
