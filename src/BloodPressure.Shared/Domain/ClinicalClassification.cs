@@ -28,8 +28,10 @@ public static class ClinicalClassification
     {
         if (value <= thresholds.VeryLowMax) return Severity.VeryLow;
         if (value <= thresholds.LowMax) return Severity.Low;
-        if (value <= thresholds.NormalMax) return Severity.Normal;
-        if (value <= thresholds.HighMax) return Severity.High;
-        return Severity.VeryHigh;
+        if (value <= thresholds.NormalLowMax) return Severity.Normal;
+        if (value <= thresholds.NormalOptimalMax) return Severity.Normal;
+        if (value <= thresholds.WarningHighMax) return Severity.High;
+        if (value >= thresholds.VeryHighMin) return Severity.VeryHigh;
+        return Severity.High;
     }
 }

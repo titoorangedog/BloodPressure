@@ -1,5 +1,6 @@
 @using BloodPressure.Shared.Contracts
 @using BloodPressure.Shared.Domain
+@implements IDisposable
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject AuthenticationStateProvider AuthStateProvider
 
@@ -13,12 +14,34 @@
 @code {
     private string Message { get; set; } = string.Empty;
     private string AlertClass { get; set; } = "alert-secondary";
+    private bool isSubscribed;
 
     protected override async Task OnInitializedAsync()
     {
+        if (!isSubscribed)
+        {
+            AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+            isSubscribed = true;
+        }
+
+        await RefreshBannerAsync();
+    }
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> authStateTask)
+    {
+        _ = InvokeAsync(async () =>
+        {
+            var authState = await authStateTask;
+            await RefreshBannerAsync(authState);
+            StateHasChanged();
+        });
+    }
+
+    private async Task RefreshBannerAsync(AuthenticationState? authState = null)
+    {
         try
         {
-            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            authState ??= await AuthStateProvider.GetAuthenticationStateAsync();
             if (authState.User.Identity?.IsAuthenticated != true)
             {
                 Message = string.Empty;
@@ -28,7 +51,8 @@
             var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
             if (license is null)
             {
-                Message = string.Empty;
+                Message = "Licenza: non assegnata";
+                AlertClass = "alert-secondary";
                 return;
             }
 
@@ -60,7 +84,16 @@
         }
         catch
         {
-            Message = string.Empty;
+            Message = "Licenza: non disponibile";
+            AlertClass = "alert-secondary";
+        }
+    }
+
+    public void Dispose()
+    {
+        if (isSubscribed)
+        {
+            AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         }
     }
 }

@@ -341,15 +341,19 @@ api.MapPut("/settings/me", async (
         {
             VeryLowMax = request.Thresholds.Systolic.VeryLowMax,
             LowMax = request.Thresholds.Systolic.LowMax,
-            NormalMax = request.Thresholds.Systolic.NormalMax,
-            HighMax = request.Thresholds.Systolic.HighMax
+            NormalLowMax = request.Thresholds.Systolic.NormalLowMax,
+            NormalOptimalMax = request.Thresholds.Systolic.NormalOptimalMax,
+            WarningHighMax = request.Thresholds.Systolic.WarningHighMax,
+            VeryHighMin = request.Thresholds.Systolic.VeryHighMin
         },
         Diastolic = new ThresholdSetEntity
         {
             VeryLowMax = request.Thresholds.Diastolic.VeryLowMax,
             LowMax = request.Thresholds.Diastolic.LowMax,
-            NormalMax = request.Thresholds.Diastolic.NormalMax,
-            HighMax = request.Thresholds.Diastolic.HighMax
+            NormalLowMax = request.Thresholds.Diastolic.NormalLowMax,
+            NormalOptimalMax = request.Thresholds.Diastolic.NormalOptimalMax,
+            WarningHighMax = request.Thresholds.Diastolic.WarningHighMax,
+            VeryHighMin = request.Thresholds.Diastolic.VeryHighMin
         }
     };
     settings.DashboardPreferences = new DashboardPreferencesEntity
@@ -708,15 +712,19 @@ static UserSettingsEntity BuildDefaultSettings(Guid userId, ClinicalThresholdsOp
             {
                 VeryLowMax = options.Systolic.VeryLowMax,
                 LowMax = options.Systolic.LowMax,
-                NormalMax = options.Systolic.NormalMax,
-                HighMax = options.Systolic.HighMax
+                NormalLowMax = options.Systolic.NormalLowMax,
+                NormalOptimalMax = options.Systolic.NormalOptimalMax,
+                WarningHighMax = options.Systolic.WarningHighMax,
+                VeryHighMin = options.Systolic.VeryHighMin
             },
             Diastolic = new ThresholdSetEntity
             {
                 VeryLowMax = options.Diastolic.VeryLowMax,
                 LowMax = options.Diastolic.LowMax,
-                NormalMax = options.Diastolic.NormalMax,
-                HighMax = options.Diastolic.HighMax
+                NormalLowMax = options.Diastolic.NormalLowMax,
+                NormalOptimalMax = options.Diastolic.NormalOptimalMax,
+                WarningHighMax = options.Diastolic.WarningHighMax,
+                VeryHighMin = options.Diastolic.VeryHighMin
             }
         },
         DashboardPreferences = new DashboardPreferencesEntity { DefaultRangeDays = 30 },
@@ -742,15 +750,19 @@ static UserSettingsResponse MapSettings(UserSettingsEntity settings)
             {
                 VeryLowMax = settings.Thresholds.Systolic.VeryLowMax,
                 LowMax = settings.Thresholds.Systolic.LowMax,
-                NormalMax = settings.Thresholds.Systolic.NormalMax,
-                HighMax = settings.Thresholds.Systolic.HighMax
+                NormalLowMax = settings.Thresholds.Systolic.NormalLowMax,
+                NormalOptimalMax = settings.Thresholds.Systolic.NormalOptimalMax,
+                WarningHighMax = settings.Thresholds.Systolic.WarningHighMax,
+                VeryHighMin = settings.Thresholds.Systolic.VeryHighMin
             },
             Diastolic = new ThresholdSetDto
             {
                 VeryLowMax = settings.Thresholds.Diastolic.VeryLowMax,
                 LowMax = settings.Thresholds.Diastolic.LowMax,
-                NormalMax = settings.Thresholds.Diastolic.NormalMax,
-                HighMax = settings.Thresholds.Diastolic.HighMax
+                NormalLowMax = settings.Thresholds.Diastolic.NormalLowMax,
+                NormalOptimalMax = settings.Thresholds.Diastolic.NormalOptimalMax,
+                WarningHighMax = settings.Thresholds.Diastolic.WarningHighMax,
+                VeryHighMin = settings.Thresholds.Diastolic.VeryHighMin
             }
         },
         DashboardPreferences = new DashboardPreferencesDto { DefaultRangeDays = settings.DashboardPreferences.DefaultRangeDays },

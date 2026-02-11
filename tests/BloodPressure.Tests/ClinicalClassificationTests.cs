@@ -11,8 +11,24 @@ public sealed class ClinicalClassificationTests
     {
         var thresholds = new ClinicalThresholdsOptions
         {
-            Systolic = new ThresholdSet { VeryLowMax = 90, LowMax = 100, NormalMax = 130, HighMax = 150 },
-            Diastolic = new ThresholdSet { VeryLowMax = 60, LowMax = 70, NormalMax = 85, HighMax = 95 }
+            Systolic = new ThresholdSet
+            {
+                VeryLowMax = 79,
+                LowMax = 99,
+                NormalLowMax = 109,
+                NormalOptimalMax = 120,
+                WarningHighMax = 139,
+                VeryHighMin = 180
+            },
+            Diastolic = new ThresholdSet
+            {
+                VeryLowMax = 49,
+                LowMax = 59,
+                NormalLowMax = 69,
+                NormalOptimalMax = 80,
+                WarningHighMax = 89,
+                VeryHighMin = 120
+            }
         };
 
         var (severity, color) = ClinicalClassification.Classify(160, 80, thresholds);

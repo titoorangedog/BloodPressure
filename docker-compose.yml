@@ -5,7 +5,7 @@ services:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${SQL_SA_PASSWORD}
     ports:
-      - "1433:1433"
+      - "14330:1433"
     networks:
       - bpnet
     healthcheck:
@@ -32,14 +32,18 @@ services:
       - GoogleOAuth__CallbackUrl=${GOOGLE_CALLBACK_URL}
       - WebClient__BaseUrl=${WEBCLIENT_BASE_URL}
       - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
-      - ClinicalThresholds__Systolic__VeryLowMax=90
-      - ClinicalThresholds__Systolic__LowMax=100
-      - ClinicalThresholds__Systolic__NormalMax=130
-      - ClinicalThresholds__Systolic__HighMax=150
-      - ClinicalThresholds__Diastolic__VeryLowMax=60
-      - ClinicalThresholds__Diastolic__LowMax=70
-      - ClinicalThresholds__Diastolic__NormalMax=85
-      - ClinicalThresholds__Diastolic__HighMax=95
+      - ClinicalThresholds__Systolic__VeryLowMax=79
+      - ClinicalThresholds__Systolic__LowMax=99
+      - ClinicalThresholds__Systolic__NormalLowMax=109
+      - ClinicalThresholds__Systolic__NormalOptimalMax=120
+      - ClinicalThresholds__Systolic__WarningHighMax=139
+      - ClinicalThresholds__Systolic__VeryHighMin=180
+      - ClinicalThresholds__Diastolic__VeryLowMax=49
+      - ClinicalThresholds__Diastolic__LowMax=59
+      - ClinicalThresholds__Diastolic__NormalLowMax=69
+      - ClinicalThresholds__Diastolic__NormalOptimalMax=80
+      - ClinicalThresholds__Diastolic__WarningHighMax=89
+      - ClinicalThresholds__Diastolic__VeryHighMin=120
       - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
     ports:
       - "7001:8080"
@@ -67,14 +71,18 @@ services:
       - Jwt__Audience=BloodPressure.Client
       - Jwt__SigningKey=${JWT_SIGNING_KEY}
       - Jwt__AccessTokenMinutes=60
-      - ClinicalThresholds__Systolic__VeryLowMax=90
-      - ClinicalThresholds__Systolic__LowMax=100
-      - ClinicalThresholds__Systolic__NormalMax=130
-      - ClinicalThresholds__Systolic__HighMax=150
-      - ClinicalThresholds__Diastolic__VeryLowMax=60
-      - ClinicalThresholds__Diastolic__LowMax=70
-      - ClinicalThresholds__Diastolic__NormalMax=85
-      - ClinicalThresholds__Diastolic__HighMax=95
+      - ClinicalThresholds__Systolic__VeryLowMax=79
+      - ClinicalThresholds__Systolic__LowMax=99
+      - ClinicalThresholds__Systolic__NormalLowMax=109
+      - ClinicalThresholds__Systolic__NormalOptimalMax=120
+      - ClinicalThresholds__Systolic__WarningHighMax=139
+      - ClinicalThresholds__Systolic__VeryHighMin=180
+      - ClinicalThresholds__Diastolic__VeryLowMax=49
+      - ClinicalThresholds__Diastolic__LowMax=59
+      - ClinicalThresholds__Diastolic__NormalLowMax=69
+      - ClinicalThresholds__Diastolic__NormalOptimalMax=80
+      - ClinicalThresholds__Diastolic__WarningHighMax=89
+      - ClinicalThresholds__Diastolic__VeryHighMin=120
       - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
     ports:
       - "7002:8080"
@@ -103,14 +111,18 @@ services:
       - Jwt__SigningKey=${JWT_SIGNING_KEY}
       - Jwt__AccessTokenMinutes=60
       - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
-      - ClinicalThresholds__Systolic__VeryLowMax=90
-      - ClinicalThresholds__Systolic__LowMax=100
-      - ClinicalThresholds__Systolic__NormalMax=130
-      - ClinicalThresholds__Systolic__HighMax=150
-      - ClinicalThresholds__Diastolic__VeryLowMax=60
-      - ClinicalThresholds__Diastolic__LowMax=70
-      - ClinicalThresholds__Diastolic__NormalMax=85
-      - ClinicalThresholds__Diastolic__HighMax=95
+      - ClinicalThresholds__Systolic__VeryLowMax=79
+      - ClinicalThresholds__Systolic__LowMax=99
+      - ClinicalThresholds__Systolic__NormalLowMax=109
+      - ClinicalThresholds__Systolic__NormalOptimalMax=120
+      - ClinicalThresholds__Systolic__WarningHighMax=139
+      - ClinicalThresholds__Systolic__VeryHighMin=180
+      - ClinicalThresholds__Diastolic__VeryLowMax=49
+      - ClinicalThresholds__Diastolic__LowMax=59
+      - ClinicalThresholds__Diastolic__NormalLowMax=69
+      - ClinicalThresholds__Diastolic__NormalOptimalMax=80
+      - ClinicalThresholds__Diastolic__WarningHighMax=89
+      - ClinicalThresholds__Diastolic__VeryHighMin=120
     ports:
       - "7003:8080"
     depends_on:

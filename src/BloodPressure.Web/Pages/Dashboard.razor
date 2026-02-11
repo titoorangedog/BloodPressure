@@ -95,8 +95,11 @@ else
             },
             "Pressione nel tempo");
 
-        var weightLabels = Stats.WeightTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToArray();
-        var weightData = Stats.WeightTrend.Select(x => x.Value).ToArray();
+        var weightTrend = Stats.WeightTrend
+            .Where(x => x.Value > 0)
+            .ToArray();
+        var weightLabels = weightTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToArray();
+        var weightData = weightTrend.Select(x => x.Value).ToArray();
 
         await Js.InvokeVoidAsync("bpCharts.renderLineChart",
             "weightChart",
