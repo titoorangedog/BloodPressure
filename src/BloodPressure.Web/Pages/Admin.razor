@@ -81,11 +81,11 @@ else
         </div>
         <div class="mb-3">
             <label class="form-label">@T("admin.assign.start", "Inizio")</label>
-            <InputDate class="form-control" @bind-Value="LicenseStart" />
+            <InputDate class="form-control bp-datepicker" @bind-Value="LicenseStart" />
         </div>
         <div class="mb-3">
             <label class="form-label">@T("admin.assign.end", "Fine")</label>
-            <InputDate class="form-control" @bind-Value="LicenseEnd" />
+            <InputDate class="form-control bp-datepicker" @bind-Value="LicenseEnd" />
         </div>
         <button class="btn btn-primary" @onclick="AssignLicense" disabled="@IsAssigningLicense">
             @if (IsAssigningLicense)
@@ -140,10 +140,10 @@ else
                                     </InputSelect>
                                 </td>
                                 <td>
-                                    <InputDate class="form-control form-control-sm" @bind-Value="EditLicenseStart" />
+                                    <InputDate class="form-control form-control-sm bp-datepicker" @bind-Value="EditLicenseStart" />
                                 </td>
                                 <td>
-                                    <InputDate class="form-control form-control-sm" @bind-Value="EditLicenseEnd" />
+                                    <InputDate class="form-control form-control-sm bp-datepicker" @bind-Value="EditLicenseEnd" />
                                 </td>
                                 <td>@(license.IsActive ? T("common.yes", "Si") : T("common.no", "No"))</td>
                                 <td class="text-end">

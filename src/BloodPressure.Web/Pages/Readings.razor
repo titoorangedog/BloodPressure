@@ -43,11 +43,11 @@
         <div class="row g-2 align-items-end">
             <div class="col-12 col-md-4">
                 <label class="form-label">@T("readings.filter.from", "Data inizio")</label>
-                <InputDate class="form-control" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" min="@GetMinFilterFromDateAttribute()" />
+                <InputDate class="form-control bp-datepicker" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" min="@GetMinFilterFromDateAttribute()" />
             </div>
             <div class="col-12 col-md-4">
                 <label class="form-label">@T("readings.filter.to", "Data fine")</label>
-                <InputDate class="form-control" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
+                <InputDate class="form-control bp-datepicker" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
             </div>
             <div class="col-12 col-md-4">
                 <button class="btn btn-primary w-100" @onclick="ApplyDateFilterAsync" disabled="@IsApplyingFilter">

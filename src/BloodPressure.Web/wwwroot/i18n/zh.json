@@ -2,6 +2,9 @@
   "nav.appName": "BloodPressure",
   "nav.language": "语言",
   "nav.languagePanelTitle": "选择语言",
+  "nav.theme": "主题",
+  "nav.themeLight": "浅色",
+  "nav.themeDark": "深色",
   "nav.menu": "导航菜单",
   "nav.role": "角色",
   "nav.readings": "测量记录",
@@ -96,6 +99,7 @@
   "readingForm.medicationSkipped": "漏服药物",
   "readingForm.symptoms": "症状",
   "readingForm.notes": "备注",
+  "readingForm.diastolicMustBeLowerThanSystolic": "舒张压必须低于收缩压。",
   "readingForm.freeLicenseSaveBlocked": "由于许可证限制，无法保存。",
 
   "dashboard.title": "仪表盘",
@@ -176,7 +180,10 @@
 
   "login.title": "登录",
   "login.sessionExpired": "会话已过期，请重新登录。",
+  "login.rememberMe": "记住登录状态",
   "login.google": "使用 Google 登录",
+  "login.embeddedBrowser.title": "不支持的浏览器",
+  "login.embeddedBrowser.message": "如需使用 Google 登录，请在外部浏览器中打开应用（Chrome、Edge 或 Safari）。",
   "info.title": "信息",
   "info.description": "BloodPressure 是一款用于记录、监控和分析血压测量数据的应用程序。它支持录入每日测量、查看趋势和 KPI、自定义临床阈值，并可使用 Excel 或 XML 格式进行数据导入与导出。同时还提供许可证管理和管理员区域，用于用户管理。",
   "info.about.title": "关于我",

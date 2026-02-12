@@ -2,6 +2,9 @@
   "nav.appName": "BloodPressure",
   "nav.language": "Sprache",
   "nav.languagePanelTitle": "Sprache auswählen",
+  "nav.theme": "Design",
+  "nav.themeLight": "Hell",
+  "nav.themeDark": "Dunkel",
   "nav.menu": "Navigationsmenü",
   "nav.role": "Rolle",
   "nav.readings": "Messungen",
@@ -96,6 +99,7 @@
   "readingForm.medicationSkipped": "Medikation ausgelassen",
   "readingForm.symptoms": "Symptome",
   "readingForm.notes": "Notizen",
+  "readingForm.diastolicMustBeLowerThanSystolic": "Der diastolische Wert muss niedriger als der systolische sein.",
   "readingForm.freeLicenseSaveBlocked": "Speichern aufgrund von Lizenzbeschränkungen nicht möglich.",
 
   "dashboard.title": "Dashboard",
@@ -176,7 +180,10 @@
 
   "login.title": "Anmeldung",
   "login.sessionExpired": "Sitzung abgelaufen, bitte erneut anmelden.",
+  "login.rememberMe": "Authentifizierung merken",
   "login.google": "Mit Google anmelden",
+  "login.embeddedBrowser.title": "Browser nicht unterstützt",
+  "login.embeddedBrowser.message": "Für die Google-Anmeldung öffne die App in einem externen Browser (Chrome, Edge oder Safari).",
   "info.title": "Informationen",
   "info.description": "BloodPressure ist eine Anwendung zum Erfassen, Überwachen und Analysieren von Blutdruckmessungen. Sie ermöglicht die Eingabe täglicher Messwerte, die Anzeige von Trends und KPIs, die Anpassung klinischer Schwellenwerte sowie den Import/Export von Daten im Excel- oder XML-Format. Außerdem enthält sie eine Lizenzverwaltung und einen Admin-Bereich zur Benutzerverwaltung.",
   "info.about.title": "Über mich",

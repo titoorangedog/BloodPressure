@@ -8,6 +8,7 @@ public sealed record JwtOptions
     public required string Audience { get; init; }
     public required string SigningKey { get; init; }
     public required int AccessTokenMinutes { get; init; }
+    public int RememberAccessTokenMinutes { get; init; } = 525600;
 }
 
 public sealed record GoogleOAuthOptions

@@ -2,6 +2,9 @@
   "nav.appName": "BloodPressure",
   "nav.language": "Langue",
   "nav.languagePanelTitle": "Sélectionner la langue",
+  "nav.theme": "Thème",
+  "nav.themeLight": "Clair",
+  "nav.themeDark": "Sombre",
   "nav.menu": "Menu de navigation",
   "nav.role": "Rôle",
   "nav.readings": "Mesures",
@@ -96,6 +99,7 @@
   "readingForm.medicationSkipped": "Médicament non pris",
   "readingForm.symptoms": "Symptômes",
   "readingForm.notes": "Notes",
+  "readingForm.diastolicMustBeLowerThanSystolic": "La pression diastolique doit être inférieure à la pression systolique.",
   "readingForm.freeLicenseSaveBlocked": "Impossible d'enregistrer en raison des limites de licence.",
 
   "dashboard.title": "Tableau de bord",
@@ -176,7 +180,10 @@
 
   "login.title": "Connexion",
   "login.sessionExpired": "Session expirée, veuillez vous reconnecter.",
+  "login.rememberMe": "Mémoriser l'authentification",
   "login.google": "Se connecter avec Google",
+  "login.embeddedBrowser.title": "Navigateur non pris en charge",
+  "login.embeddedBrowser.message": "Pour vous connecter avec Google, ouvrez l'application dans un navigateur externe (Chrome, Edge ou Safari).",
   "info.title": "Informations",
   "info.description": "BloodPressure est une application pour enregistrer, surveiller et analyser les mesures de pression artérielle. Elle permet de saisir des mesures quotidiennes, d'afficher des tendances et des KPI, de personnaliser les seuils cliniques et de gérer l'import/export des données au format Excel ou XML. Elle inclut également la gestion des licences et un espace d'administration pour le contrôle des utilisateurs.",
   "info.about.title": "Qui suis-je",

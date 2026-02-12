@@ -13,10 +13,11 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options)
 {
     private readonly JwtOptions _options = options.Value;
 
-    public (string Token, DateTimeOffset ExpiresAtUtc) CreateToken(UserEntity user, LicenseType licenseType)
+    public (string Token, DateTimeOffset ExpiresAtUtc) CreateToken(UserEntity user, LicenseType licenseType, bool rememberMe)
     {
         var nowUtc = DateTimeOffset.UtcNow;
-        var expires = nowUtc.AddMinutes(_options.AccessTokenMinutes);
+        var accessMinutes = rememberMe ? _options.RememberAccessTokenMinutes : _options.AccessTokenMinutes;
+        var expires = nowUtc.AddMinutes(accessMinutes);
 
         var claims = new List<Claim>
         {

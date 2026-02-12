@@ -86,15 +86,16 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 
-app.MapGet("/auth/login-url", (GoogleOAuthClient client) =>
+app.MapGet("/auth/login-url", (GoogleOAuthClient client, bool remember) =>
 {
-    var state = Guid.NewGuid().ToString("N");
+    var state = BuildOAuthState(remember);
     var url = client.BuildLoginUrl(state);
     return Results.Ok(new LoginUrlResponse { Url = url });
 }).AllowAnonymous();
 
 app.MapGet("/auth/callback", async (
     string code,
+    string? state,
     GoogleOAuthClient oauthClient,
     JwtTokenService tokenService,
     IOptions<WebClientOptions> webClientOptions,
@@ -148,7 +149,8 @@ app.MapGet("/auth/callback", async (
     await db.SaveChangesAsync(cancellationToken);
 
     var activeLicense = user.Licenses.Single(x => x.IsActive);
-    var (token, expiresAtUtc) = tokenService.CreateToken(user, activeLicense.Type);
+    var rememberMe = ParseRememberFromState(state);
+    var (token, expiresAtUtc) = tokenService.CreateToken(user, activeLicense.Type, rememberMe);
 
     var redirectUrl = $"{webClientOptions.Value.BaseUrl.TrimEnd('/')}/auth-callback?token={Uri.EscapeDataString(token)}&expires={Uri.EscapeDataString(expiresAtUtc.ToString("O"))}";
     return Results.Redirect(redirectUrl);
@@ -219,4 +221,21 @@ static LicenseEntity BuildNewLicense(Guid userId)
         EndDateUtc = now.AddDays(90),
         IsActive = true
     };
+}
+
+static string BuildOAuthState(bool remember)
+{
+    var flag = remember ? "1" : "0";
+    return $"{flag}.{Guid.NewGuid():N}";
+}
+
+static bool ParseRememberFromState(string? state)
+{
+    if (string.IsNullOrWhiteSpace(state))
+    {
+        return false;
+    }
+
+    var value = state.Trim();
+    return value.StartsWith("1.", StringComparison.Ordinal);
 }

@@ -18,6 +18,7 @@ builder.Services.AddTransient<AuthMessageHandler>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<ToastService>();
 builder.Services.AddScoped<LocalizationService>();
+builder.Services.AddScoped<ThemeService>();
 
 string ResolveApiBase(string key)
 {
