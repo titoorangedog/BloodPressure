@@ -2,6 +2,7 @@
 @using BloodPressure.Shared.Domain
 @implements IDisposable
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject AuthenticationStateProvider AuthStateProvider
 
 @if (!string.IsNullOrWhiteSpace(Message))
@@ -15,6 +16,7 @@
     private string Message { get; set; } = string.Empty;
     private string AlertClass { get; set; } = "alert-secondary";
     private bool isSubscribed;
+    private bool isLocalizationSubscribed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -22,6 +24,11 @@
         {
             AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
             isSubscribed = true;
+        }
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
         }
 
         await RefreshBannerAsync();
@@ -51,49 +58,66 @@
             var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
             if (license is null)
             {
-                Message = "Licenza: non assegnata";
+                Message = T("license.notAssigned", "Licenza: non assegnata");
                 AlertClass = "alert-secondary";
                 return;
             }
 
-            var remainingText = LicenseCalculator.FormatRemainingItalian(DateTimeOffset.UtcNow, license.EndDateUtc);
+            var remainingDays = Math.Max(0, license.DaysRemaining);
 
             if (license.Type == LicenseType.Premium)
             {
-                Message = $"Licenza: {license.Type} - Illimitata";
+                Message = TFormat("license.premiumUnlimited", "Licenza: {0} - Illimitata", license.Type);
                 AlertClass = "alert-success";
                 return;
             }
 
             if (license.IsExpired)
             {
-                Message = $"Licenza: {license.Type} - Scaduta";
+                Message = TFormat("license.expired", "Licenza: {0} - Scaduta", license.Type);
                 AlertClass = "alert-danger";
                 return;
             }
 
             if (license.DaysRemaining <= 14)
             {
-                Message = $"Licenza: {license.Type} - Scade tra {remainingText}";
+                Message = TFormat("license.expiresIn", "Licenza: {0} - Scade tra {1} giorni", license.Type, remainingDays);
                 AlertClass = "alert-warning";
                 return;
             }
 
-            Message = $"Licenza: {license.Type} - Scade tra {remainingText}";
+            Message = TFormat("license.expiresIn", "Licenza: {0} - Scade tra {1} giorni", license.Type, remainingDays);
             AlertClass = "alert-success";
         }
         catch
         {
-            Message = "Licenza: non disponibile";
+            Message = T("license.unavailable", "Licenza: non disponibile");
             AlertClass = "alert-secondary";
         }
     }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(async () =>
+        {
+            await RefreshBannerAsync();
+            StateHasChanged();
+        });
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
+    private string TFormat(string key, string fallbackTemplate, params object[] args) => LocalizationService.TFormat(key, fallbackTemplate, args);
 
     public void Dispose()
     {
         if (isSubscribed)
         {
             AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
         }
     }
 }

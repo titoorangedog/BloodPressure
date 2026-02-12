@@ -1,0 +1,52 @@
+@page "/info"
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
+@implements IDisposable
+
+<h1>@T("info.title", "Informazioni")</h1>
+
+<div class="card">
+    <div class="card-body">
+        <p class="mb-0">@T("info.description", "BloodPressure è un'applicazione per registrare, monitorare e analizzare le rilevazioni della pressione arteriosa. Permette di inserire misurazioni giornaliere, visualizzare trend e KPI, personalizzare soglie cliniche e gestire import/export dei dati in formato Excel o XML. Include inoltre gestione licenze e area amministrativa per il controllo degli utenti.")</p>
+    </div>
+</div>
+
+<h1 class="mt-4">@T("info.about.title", "Chi sono")</h1>
+
+<div class="card">
+    <div class="card-body">
+        <p>@T("info.about.p1", "Sono uno sviluppatore software specializzato nello sviluppo di applicazioni web e servizi backend in ambiente .NET. Progetto architetture scalabili e manutenibili seguendo principi di Clean Architecture, SOLID e separazione delle responsabilità.")</p>
+        <p>@T("info.about.p2", "Sviluppo API in architettura a microservizi performanti e sicure utilizzando C#, con particolare attenzione alla gestione degli errori, validazione dei dati, logging strutturato, resilienza e ottimizzazione delle performance.")</p>
+        <p>@T("info.about.p3", "Lavoro con database relazionali e non relazionali, curando modellazione dei dati, indicizzazione e scrittura di query ottimizzate. Progetto sistemi containerizzati con Docker, integrazione in pipeline CI/CD e processi di deploy automatizzati.")</p>
+        <p>@T("info.about.p4", "Integro pratiche di osservabilità attraverso logging centralizzato, metriche e monitoraggio applicativo per garantire affidabilità e continuità operativa.")</p>
+        <p>@T("info.about.p5", "Gestisco progetti end-to-end, dall’analisi dei requisiti alla progettazione architetturale, fino al rilascio in produzione e al monitoraggio post-deploy, assumendomi la responsabilità tecnica dell’intero ciclo di vita applicativo.")</p>
+        <p class="mb-0">@T("info.about.contact", "Per contattarmi: ferrara.giuseppe@gmail.com")</p>
+    </div>
+</div>
+
+@code {
+    private bool isLocalizationSubscribed;
+
+    protected override void OnInitialized()
+    {
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
+        }
+    }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
+}

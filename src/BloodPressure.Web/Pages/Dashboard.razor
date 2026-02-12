@@ -4,13 +4,15 @@
 @using Microsoft.AspNetCore.Components.Forms
 @inject BloodPressure.Web.Services.StatsApiClient StatsApiClient
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject IJSRuntime Js
+@implements IDisposable
 
-<h1>Dashboard</h1>
+<h1>@T("dashboard.title", "Dashboard")</h1>
 
 @if (IsLoading)
 {
-    <p>Caricamento...</p>
+    <p>@T("common.loading", "Caricamento...")</p>
 }
 else if (!string.IsNullOrWhiteSpace(Error))
 {
@@ -26,14 +28,14 @@ else
     {
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">Filtro periodo</h5>
+                <h5 class="card-title">@T("readings.filter.title", "Filtro periodo")</h5>
                 <div class="row g-2 align-items-end">
                     <div class="col-12 col-md-4">
-                        <label class="form-label">Data inizio</label>
+                        <label class="form-label">@T("dashboard.filter.from", "Data inizio")</label>
                         <InputDate class="form-control" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" />
                     </div>
                     <div class="col-12 col-md-4">
-                        <label class="form-label">Data fine</label>
+                        <label class="form-label">@T("dashboard.filter.to", "Data fine")</label>
                         <InputDate class="form-control" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
                     </div>
                     <div class="col-12 col-md-4">
@@ -42,7 +44,7 @@ else
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                             }
-                            Filtra
+                            @T("dashboard.filter.apply", "Filtra")
                         </button>
                     </div>
                 </div>
@@ -52,13 +54,13 @@ else
     <div class="mb-4 chart-container">
         <canvas id="bpChart"></canvas>
     </div>
-    <h5>Confronto Mattino/Sera</h5>
+    <h5>@T("dashboard.morningEvening.title", "Confronto Mattino/Sera")</h5>
     <div class="mb-4 chart-container">
         <canvas id="bpMorningEveningChart"></canvas>
     </div>
     @if (!HasMorningEveningData)
     {
-        <div class="alert alert-secondary mb-4">Nessun dato disponibile per le fasce Mattino/Sera nel periodo selezionato.</div>
+        <div class="alert alert-secondary mb-4">@T("dashboard.morningEvening.noData", "Nessun dato disponibile per le fasce Mattino/Sera nel periodo selezionato.")</div>
     }
     <div class="mb-4 chart-container">
         <canvas id="weightChart"></canvas>
@@ -67,12 +69,12 @@ else
         <canvas id="hrChart"></canvas>
     </div>
 
-    <h3>KPI</h3>
+    <h3>@T("dashboard.kpi.title", "KPI")</h3>
     <ul>
-        <li>Media sistolica: @Stats!.Kpis.AverageSystolic</li>
-        <li>Media diastolica: @Stats!.Kpis.AverageDiastolic</li>
-        <li>Min/Max sistolica: @Stats!.Kpis.MinSystolic / @Stats!.Kpis.MaxSystolic</li>
-        <li>Min/Max diastolica: @Stats!.Kpis.MinDiastolic / @Stats!.Kpis.MaxDiastolic</li>
+        <li>@T("dashboard.kpi.avgSystolic", "Media sistolica"): @Stats!.Kpis.AverageSystolic</li>
+        <li>@T("dashboard.kpi.avgDiastolic", "Media diastolica"): @Stats!.Kpis.AverageDiastolic</li>
+        <li>@T("dashboard.kpi.minMaxSystolic", "Min/Max sistolica"): @Stats!.Kpis.MinSystolic / @Stats!.Kpis.MaxSystolic</li>
+        <li>@T("dashboard.kpi.minMaxDiastolic", "Min/Max diastolica"): @Stats!.Kpis.MinDiastolic / @Stats!.Kpis.MaxDiastolic</li>
     </ul>
 }
 
@@ -86,6 +88,7 @@ else
     private LicenseType? ActiveLicenseType { get; set; }
     private DateOnly FilterFromDate { get; set; }
     private DateOnly FilterToDate { get; set; }
+    private bool isLocalizationSubscribed;
     private bool CanCustomizeDateRange =>
         ActiveLicenseType is LicenseType.Advanced or LicenseType.Premium;
     private bool HasMorningEveningData =>
@@ -97,6 +100,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
+        }
+
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         FilterFromDate = today.AddDays(-180);
         FilterToDate = today;
@@ -107,7 +116,7 @@ else
             ActiveLicenseType = license?.Type;
             if (license?.Type == LicenseType.Free)
             {
-                Notice = "Licenza Free: le statistiche sono limitate agli ultimi 30 giorni.";
+                Notice = T("dashboard.notice.free", "Licenza Free: le statistiche sono limitate agli ultimi 30 giorni.");
             }
 
             var fromDate = CanCustomizeDateRange ? FilterFromDate : today.AddDays(-30);
@@ -116,7 +125,7 @@ else
         }
         catch
         {
-            Error = "Impossibile caricare la dashboard. Verifica la licenza o riprova.";
+            Error = T("dashboard.error.load", "Impossibile caricare la dashboard. Verifica la licenza o riprova.");
         }
         finally
         {
@@ -140,10 +149,10 @@ else
             labels,
             new object[]
             {
-                new { label = "Sistolica", data = systolic, borderColor = "red" },
-                new { label = "Diastolica", data = diastolic, borderColor = "orange" }
+                new { label = T("readings.table.systolic", "Sistolica"), data = systolic, borderColor = "red" },
+                new { label = T("readings.table.diastolic", "Diastolica"), data = diastolic, borderColor = "orange" }
             },
-            "Pressione nel tempo");
+            T("dashboard.chart.pressureOverTime", "Pressione nel tempo"));
 
         var morningEveningTrend = Stats.MorningEveningBloodPressureTrend
             .Where(x =>
@@ -165,12 +174,12 @@ else
             meLabels,
             new object[]
             {
-                new { label = "Sistolica Mattino", data = morningSystolic, borderColor = "#d9534f" },
-                new { label = "Sistolica Sera", data = eveningSystolic, borderColor = "#8b0000" },
-                new { label = "Diastolica Mattino", data = morningDiastolic, borderColor = "#f0ad4e" },
-                new { label = "Diastolica Sera", data = eveningDiastolic, borderColor = "#b36b00" }
+                new { label = T("dashboard.chart.morningSystolic", "Sistolica Mattino"), data = morningSystolic, borderColor = "#d9534f" },
+                new { label = T("dashboard.chart.eveningSystolic", "Sistolica Sera"), data = eveningSystolic, borderColor = "#8b0000" },
+                new { label = T("dashboard.chart.morningDiastolic", "Diastolica Mattino"), data = morningDiastolic, borderColor = "#f0ad4e" },
+                new { label = T("dashboard.chart.eveningDiastolic", "Diastolica Sera"), data = eveningDiastolic, borderColor = "#b36b00" }
             },
-            "Confronto Mattino/Sera");
+            T("dashboard.morningEvening.title", "Confronto Mattino/Sera"));
 
         var weightTrend = Stats.WeightTrend
             .Where(x => x.Value > 0)
@@ -183,9 +192,9 @@ else
             weightLabels,
             new object[]
             {
-                new { label = "Peso", data = weightData, borderColor = "blue" }
+                new { label = T("readings.table.weight", "Peso"), data = weightData, borderColor = "blue" }
             },
-            "Trend peso");
+            T("dashboard.chart.weightTrend", "Trend peso"));
 
         var hrLabels = Stats.HeartRateTrend.Select(x => x.Date.ToString("yyyy-MM-dd")).ToArray();
         var hrData = Stats.HeartRateTrend.Select(x => x.Value).ToArray();
@@ -195,9 +204,9 @@ else
             hrLabels,
             new object[]
             {
-                new { label = "Heart Rate", data = hrData, borderColor = "green" }
+                new { label = T("dashboard.chart.heartRate", "Heart Rate"), data = hrData, borderColor = "green" }
             },
-            "Trend battiti");
+            T("dashboard.chart.heartRateTrend", "Trend battiti"));
 
         chartRenderPending = false;
         if (IsApplyingFilter)
@@ -216,7 +225,7 @@ else
 
         if (FilterFromDate > FilterToDate)
         {
-            Error = "La data di inizio deve essere precedente o uguale alla data di fine.";
+            Error = T("common.dateRangeInvalid", "La data di inizio deve essere precedente o uguale alla data di fine.");
             return;
         }
 
@@ -228,7 +237,7 @@ else
         }
         catch
         {
-            Error = "Impossibile caricare la dashboard. Verifica la licenza o riprova.";
+            Error = T("dashboard.error.load", "Impossibile caricare la dashboard. Verifica la licenza o riprova.");
             IsApplyingFilter = false;
         }
     }
@@ -244,4 +253,24 @@ else
         Stats = await StatsApiClient.GetDashboardAsync(request, CancellationToken.None);
         chartRenderPending = true;
     }
+
+    private void OnLanguageChanged()
+    {
+        if (Stats is not null)
+        {
+            chartRenderPending = true;
+        }
+
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
 }

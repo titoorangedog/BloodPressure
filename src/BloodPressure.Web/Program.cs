@@ -9,6 +9,7 @@ builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 builder.Services.AddScoped<TokenStorage>();
 builder.Services.AddScoped<JwtAuthenticationStateProvider>();
@@ -16,6 +17,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 builder.Services.AddTransient<AuthMessageHandler>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddSingleton<ToastService>();
+builder.Services.AddScoped<LocalizationService>();
 
 string ResolveApiBase(string key)
 {

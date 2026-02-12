@@ -4,14 +4,34 @@
 @implements IDisposable
 @inject AuthenticationStateProvider AuthStateProvider
 @inject BloodPressure.Web.Services.AuthService AuthService
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @using BloodPressure.Web.Shared
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">BloodPressure</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+        <a class="navbar-brand" href="">@T("nav.appName", "BloodPressure")</a>
+        <div class="d-flex align-items-center gap-2 position-relative">
+            <button title="@T("nav.language", "Lingua")" class="btn btn-sm btn-outline-light language-trigger" @onclick:stopPropagation="true" @onclick="ToggleLanguagePanel">
+                <img class="language-trigger-flag" src="@GetFlagImageUrl(CurrentLanguageFlagCode)" alt="@CurrentLanguageFlagCode" loading="lazy" />
+            </button>
+            @if (showLanguagePanel)
+            {
+                <div class="language-panel shadow-sm" @onclick:stopPropagation="true">
+                    <div class="language-panel-title">@T("nav.languagePanelTitle", "Seleziona lingua")</div>
+                    @foreach (var language in LocalizationService.SupportedLanguages)
+                    {
+                        var isCurrent = string.Equals(language.Code, LocalizationService.CurrentLanguageCode, StringComparison.OrdinalIgnoreCase);
+                        <button type="button" class="language-option @(isCurrent ? "active" : null)" @onclick="() => SelectLanguageAsync(language.Code)">
+                            <img class="flag" src="@GetFlagImageUrl(language.FlagCode)" alt="@language.FlagCode" loading="lazy" />
+                            <span>@language.DisplayName</span>
+                        </button>
+                    }
+                </div>
+            }
+            <button title="@T("nav.menu", "Menu di navigazione")" class="navbar-toggler" @onclick="ToggleNavMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
     </div>
 </div>
 
@@ -23,34 +43,39 @@
                 <div class="nav-item px-3">
                     <div class="nav-link">
                         <div>@GetEmail(CurrentUser)</div>
-                        <small>Ruolo: @GetRole(CurrentUser)</small>
+                        <small>@T("nav.role", "Ruolo"): @GetRole(CurrentUser)</small>
                     </div>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="readings">
-                        Rilevazioni
+                        @T("nav.readings", "Rilevazioni")
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="readings/new">
-                        Nuova rilevazione
+                        @T("nav.newReading", "Nuova rilevazione")
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="dashboard">
-                        Grafici
+                        @T("nav.charts", "Grafici")
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="settings">
-                        Impostazioni
+                        @T("nav.settings", "Impostazioni")
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="info">
+                        @T("nav.info", "Informazioni")
                     </NavLink>
                 </div>
                 @if (IsAdmin(CurrentUser))
                 {
                     <div class="nav-item px-3">
                         <NavLink class="nav-link" href="admin">
-                            Admin
+                            @T("nav.admin", "Admin")
                         </NavLink>
                     </div>
                 }
@@ -63,12 +88,12 @@
             <div class="nav-item px-3 mt-3">
                 @if (IsAuthenticated)
                 {
-                    <button class="btn btn-outline-primary w-100" @onclick="AuthService.LogoutAsync">Logout</button>
+                    <button class="btn btn-outline-primary w-100" @onclick="AuthService.LogoutAsync">@T("nav.logout", "Logout")</button>
                 }
                 else
                 {
                     <NavLink class="btn btn-outline-primary w-100" href="login">
-                        Login
+                        @T("nav.login", "Login")
                     </NavLink>
                 }
             </div>
@@ -78,7 +103,9 @@
 
 @code {
     private bool collapseNavMenu = true;
+    private bool showLanguagePanel;
     private bool isSubscribed;
+    private bool isLocalizationSubscribed;
     private ClaimsPrincipal CurrentUser { get; set; } = new(new ClaimsIdentity());
     private bool IsAuthenticated => CurrentUser.Identity?.IsAuthenticated == true;
 
@@ -87,6 +114,18 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+        showLanguagePanel = false;
+    }
+
+    private void ToggleLanguagePanel()
+    {
+        showLanguagePanel = !showLanguagePanel;
+    }
+
+    private async Task SelectLanguageAsync(string languageCode)
+    {
+        await LocalizationService.SetLanguageAsync(languageCode);
+        showLanguagePanel = false;
     }
 
     protected override async Task OnInitializedAsync()
@@ -95,6 +134,11 @@
         {
             AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
             isSubscribed = true;
+        }
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
         }
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -111,25 +155,48 @@
         });
     }
 
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string CurrentLanguageFlagCode
+        => LocalizationService.SupportedLanguages
+            .FirstOrDefault(x => string.Equals(x.Code, LocalizationService.CurrentLanguageCode, StringComparison.OrdinalIgnoreCase))
+            ?.FlagCode ?? "IT";
+
     private static bool IsAdmin(ClaimsPrincipal user)
         => user.GetUserRole() == UserRole.Admin;
 
-    private static string GetEmail(ClaimsPrincipal user)
+    private string GetEmail(ClaimsPrincipal user)
     {
         return user.FindFirst(ClaimTypes.Email)?.Value
             ?? user.FindFirst("email")?.Value
             ?? user.Identity?.Name
-            ?? "Utente";
+            ?? T("nav.userFallback", "Utente");
     }
 
     private static string GetRole(ClaimsPrincipal user)
         => user.GetUserRole().ToString();
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
+
+    private static string GetFlagImageUrl(string countryCode)
+    {
+        var normalized = string.IsNullOrWhiteSpace(countryCode) ? "it" : countryCode.ToLowerInvariant();
+        return $"https://flagcdn.com/24x18/{normalized}.png";
+    }
 
     public void Dispose()
     {
         if (isSubscribed)
         {
             AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        }
+
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
         }
     }
 }

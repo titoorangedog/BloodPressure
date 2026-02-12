@@ -1,24 +1,33 @@
 @page "/login"
 @attribute [AllowAnonymous]
 @inject BloodPressure.Web.Services.AuthService AuthService
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject NavigationManager Navigation
+@implements IDisposable
 
-<h1>Login</h1>
+<h1>@T("login.title", "Login")</h1>
 
 @if (ShowExpiredMessage)
 {
     <div class="alert alert-warning" role="alert">
-        Sessione scaduta, effettua di nuovo l’accesso.
+        @T("login.sessionExpired", "Sessione scaduta, effettua di nuovo l'accesso.")
     </div>
 }
 
-<button class="btn btn-primary" @onclick="StartLogin">Accedi con Google</button>
+<button class="btn btn-primary" @onclick="StartLogin">@T("login.google", "Accedi con Google")</button>
 
 @code {
     private bool ShowExpiredMessage { get; set; }
+    private bool isLocalizationSubscribed;
 
     protected override void OnInitialized()
     {
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
+        }
+
         var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
         var query = ParseQuery(uri.Query);
         ShowExpiredMessage = query.TryGetValue("reason", out var value) &&
@@ -48,5 +57,20 @@
     private async Task StartLogin()
     {
         await AuthService.StartLoginAsync(CancellationToken.None);
+    }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
+
+    public void Dispose()
+    {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
     }
 }
