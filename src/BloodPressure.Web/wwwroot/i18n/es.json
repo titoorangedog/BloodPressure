@@ -2,6 +2,9 @@
   "nav.appName": "BloodPressure",
   "nav.language": "Idioma",
   "nav.languagePanelTitle": "Seleccionar idioma",
+  "nav.theme": "Tema",
+  "nav.themeLight": "Claro",
+  "nav.themeDark": "Oscuro",
   "nav.menu": "Menú de navegación",
   "nav.role": "Rol",
   "nav.readings": "Mediciones",
@@ -96,6 +99,7 @@
   "readingForm.medicationSkipped": "Medicamento omitido",
   "readingForm.symptoms": "Síntomas",
   "readingForm.notes": "Notas",
+  "readingForm.diastolicMustBeLowerThanSystolic": "La presión diastólica debe ser menor que la sistólica.",
   "readingForm.freeLicenseSaveBlocked": "No se puede guardar debido a las limitaciones de la licencia.",
 
   "dashboard.title": "Panel",
@@ -176,7 +180,10 @@
 
   "login.title": "Inicio de sesión",
   "login.sessionExpired": "Sesión expirada, inicia sesión de nuevo.",
+  "login.rememberMe": "Recordar autenticación",
   "login.google": "Iniciar sesión con Google",
+  "login.embeddedBrowser.title": "Navegador no compatible",
+  "login.embeddedBrowser.message": "Para iniciar sesión con Google, abre la app en un navegador externo (Chrome, Edge o Safari).",
   "info.title": "Información",
   "info.description": "BloodPressure es una aplicación para registrar, monitorizar y analizar mediciones de presión arterial. Permite introducir mediciones diarias, visualizar tendencias y KPIs, personalizar umbrales clínicos y gestionar la importación/exportación de datos en formato Excel o XML. También incluye gestión de licencias y un área de administración para el control de usuarios.",
   "info.about.title": "Quién soy",

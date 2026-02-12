@@ -5,13 +5,34 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject BloodPressure.Web.Services.AuthService AuthService
 @inject BloodPressure.Web.Services.LocalizationService LocalizationService
+@inject BloodPressure.Web.Services.ThemeService ThemeService
 @using BloodPressure.Web.Shared
 
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar @NavbarThemeClass">
     <div class="container-fluid">
         <a class="navbar-brand" href="">@T("nav.appName", "BloodPressure")</a>
         <div class="d-flex align-items-center gap-2 position-relative">
-            <button title="@T("nav.language", "Lingua")" class="btn btn-sm btn-outline-light language-trigger" @onclick:stopPropagation="true" @onclick="ToggleLanguagePanel">
+            <button title="@T("nav.theme", "Tema")" class="btn btn-sm @HeaderButtonClass" @onclick="ToggleThemeAsync">
+                @if (ThemeService.IsDarkTheme)
+                {
+                    <span aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6.76 4.84 5.34 3.42 4.22 4.54l1.42 1.42 1.12-1.12Zm10.6-1.42-1.42 1.42 1.12 1.12 1.42-1.42-1.12-1.12ZM12 4h1V1h-2v3h1Zm7 7v2h3v-2h-3ZM4 11H1v2h3v-2Zm13.24 8.16 1.12 1.12 1.42-1.42-1.12-1.12-1.42 1.42ZM4.22 19.46l1.12 1.12 1.42-1.42-1.12-1.12-1.42 1.42ZM12 23h1v-3h-2v3h1Zm0-5a6 6 0 1 1 0-12 6 6 0 0 1 0 12Z" />
+                        </svg>
+                    </span>
+                    <span class="ms-1">@T("nav.themeDark", "Scuro")</span>
+                }
+                else
+                {
+                    <span aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M9.37 5.51A7.5 7.5 0 0 0 18.5 14.63 8 8 0 1 1 9.37 5.5Z" />
+                        </svg>
+                    </span>
+                    <span class="ms-1">@T("nav.themeLight", "Chiaro")</span>
+                }
+            </button>
+            <button title="@T("nav.language", "Lingua")" class="btn btn-sm @HeaderButtonClass language-trigger" @onclick:stopPropagation="true" @onclick="ToggleLanguagePanel">
                 <img class="language-trigger-flag" src="@GetFlagImageUrl(CurrentLanguageFlagCode)" alt="@CurrentLanguageFlagCode" loading="lazy" />
             </button>
             @if (showLanguagePanel)
@@ -106,8 +127,11 @@
     private bool showLanguagePanel;
     private bool isSubscribed;
     private bool isLocalizationSubscribed;
+    private bool isThemeSubscribed;
     private ClaimsPrincipal CurrentUser { get; set; } = new(new ClaimsIdentity());
     private bool IsAuthenticated => CurrentUser.Identity?.IsAuthenticated == true;
+    private string NavbarThemeClass => ThemeService.IsDarkTheme ? "navbar-dark bp-navbar-dark" : "navbar-light bp-navbar-light";
+    private string HeaderButtonClass => ThemeService.IsDarkTheme ? "btn-outline-light" : "btn-outline-dark";
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
@@ -140,6 +164,11 @@
             LocalizationService.LanguageChanged += OnLanguageChanged;
             isLocalizationSubscribed = true;
         }
+        if (!isThemeSubscribed)
+        {
+            ThemeService.ThemeChanged += OnThemeChanged;
+            isThemeSubscribed = true;
+        }
 
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         CurrentUser = authState.User;
@@ -158,6 +187,16 @@
     private void OnLanguageChanged()
     {
         _ = InvokeAsync(StateHasChanged);
+    }
+
+    private void OnThemeChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        await ThemeService.ToggleThemeAsync();
     }
 
     private string CurrentLanguageFlagCode
@@ -197,6 +236,11 @@
         if (isLocalizationSubscribed)
         {
             LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
+
+        if (isThemeSubscribed)
+        {
+            ThemeService.ThemeChanged -= OnThemeChanged;
         }
     }
 }

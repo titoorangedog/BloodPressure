@@ -50,8 +50,8 @@
             }
         };
 
-        window.bpTimePicker = {
-            init: function () {
+        window.bpPickers = {
+            initTime: function () {
                 if (!window.flatpickr) return;
                 var elements = document.querySelectorAll(".bp-timepicker");
                 elements.forEach(function (el) {
@@ -65,6 +65,30 @@
                         allowInput: true
                     });
                 });
+            },
+            initDate: function () {
+                if (!window.flatpickr) return;
+                var elements = document.querySelectorAll(".bp-datepicker");
+                elements.forEach(function (el) {
+                    if (el._flatpickr) return;
+                    flatpickr(el, {
+                        dateFormat: "Y-m-d",
+                        allowInput: true
+                    });
+                });
+            },
+            init: function () {
+                window.bpPickers.initDate();
+                window.bpPickers.initTime();
+            },
+            observe: function () {
+                if (window.bpPickers._observer) return;
+                var root = document.getElementById("app");
+                if (!root) return;
+                window.bpPickers._observer = new MutationObserver(function () {
+                    window.bpPickers.init();
+                });
+                window.bpPickers._observer.observe(root, { childList: true, subtree: true });
             }
         };
 
@@ -87,8 +111,47 @@
             }
         };
 
+        window.bpTheme = {
+            getTheme: function (key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch {
+                    return null;
+                }
+            },
+            setTheme: function (key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                } catch { }
+            },
+            getSystemTheme: function () {
+                try {
+                    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                } catch {
+                    return "light";
+                }
+            },
+            applyTheme: function (theme) {
+                var normalized = theme === "dark" ? "dark" : "light";
+                document.documentElement.setAttribute("data-bs-theme", normalized);
+            }
+        };
+
+        window.bpAuth = {
+            isEmbeddedBrowser: function () {
+                var ua = navigator.userAgent || "";
+                var isAndroidWebView = /\bwv\b/.test(ua) || /Version\/[\d.]+ Chrome\/[\d.]+ Mobile/.test(ua);
+                var isiOSWebView = /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua);
+                var isInAppBrowser = /(FBAN|FBAV|Instagram|Line|MicroMessenger|Twitter|LinkedInApp)/i.test(ua);
+                return isAndroidWebView || isiOSWebView || isInAppBrowser;
+            }
+        };
+
         document.addEventListener("DOMContentLoaded", function () {
-            window.bpTimePicker.init();
+            window.bpPickers.init();
+            window.bpPickers.observe();
+            var currentTheme = window.bpTheme.getTheme("bp.theme") || window.bpTheme.getSystemTheme();
+            window.bpTheme.applyTheme(currentTheme);
         });
     </script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>

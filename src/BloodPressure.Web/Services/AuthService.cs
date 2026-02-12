@@ -7,9 +7,9 @@ public sealed class AuthService(
     JwtAuthenticationStateProvider authStateProvider,
     NavigationManager navigationManager)
 {
-    public async Task StartLoginAsync(CancellationToken cancellationToken)
+    public async Task StartLoginAsync(bool remember, CancellationToken cancellationToken)
     {
-        var loginUrl = await authApiClient.GetLoginUrlAsync(cancellationToken);
+        var loginUrl = await authApiClient.GetLoginUrlAsync(remember, cancellationToken);
         navigationManager.NavigateTo(loginUrl.Url, forceLoad: true);
     }
 

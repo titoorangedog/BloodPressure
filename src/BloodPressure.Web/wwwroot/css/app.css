@@ -225,6 +225,27 @@ code {
     object-fit: cover;
 }
 
+[data-bs-theme="dark"] .language-panel {
+    background: #1f232a;
+    border-color: #3b4452;
+}
+
+[data-bs-theme="dark"] .language-panel-title {
+    color: #9aa4b2;
+}
+
+[data-bs-theme="dark"] .language-option {
+    color: #e5e7eb;
+}
+
+[data-bs-theme="dark"] .language-option:hover {
+    background: #2b3340;
+}
+
+[data-bs-theme="dark"] .language-option.active {
+    background: #2f3f57;
+}
+
 @media (max-width: 640px) {
     .chart-container {
         height: 220px;

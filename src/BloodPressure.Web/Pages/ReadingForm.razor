@@ -28,7 +28,7 @@ else
             <div class="col-12 col-lg-3">
                 <div class="mb-3">
                     <label class="form-label">@T("readingForm.dateLocal", "Data (locale)")</label>
-                    <InputDate class="form-control" @bind-Value="Model.DateLocal" @onchange="OnDateOrTimeChanged" />
+                    <InputDate class="form-control bp-datepicker" @bind-Value="Model.DateLocal" @onchange="OnDateOrTimeChanged" />
                 </div>
             </div>
             <div class="col-12 col-lg-3">
@@ -191,7 +191,7 @@ else
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("bpTimePicker.init");
+            await JS.InvokeVoidAsync("bpPickers.init");
         }
     }
 
@@ -204,6 +204,15 @@ else
 
         NormalizeTimeText();
         UpdateTimeSlotFromTime(false);
+
+        if (Model.Diastolic >= Model.Systolic)
+        {
+            ToastService.Show(
+                T("readingForm.diastolicMustBeLowerThanSystolic", "La pressione diastolica deve essere inferiore alla sistolica."),
+                ToastLevel.Error,
+                7000);
+            return;
+        }
 
         var request = Model.ToCreateRequest();
         if (ActiveLicenseType == LicenseType.Free && request.TimestampUtc < DateTimeOffset.UtcNow.AddDays(-30))

@@ -3,6 +3,7 @@
 @inject BloodPressure.Web.Services.AuthService AuthService
 @inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 @implements IDisposable
 
 <h1>@T("login.title", "Login")</h1>
@@ -14,10 +15,25 @@
     </div>
 }
 
-<button class="btn btn-primary" @onclick="StartLogin">@T("login.google", "Accedi con Google")</button>
+@if (IsEmbeddedBrowser)
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>@T("login.embeddedBrowser.title", "Browser non supportato")</strong><br />
+        @T("login.embeddedBrowser.message", "Per accedere con Google apri l'app in un browser esterno (Chrome, Edge o Safari).")
+    </div>
+}
+
+<div class="form-check mb-3">
+    <InputCheckbox id="rememberLogin" class="form-check-input" @bind-Value="RememberLogin" />
+    <label class="form-check-label" for="rememberLogin">@T("login.rememberMe", "Ricorda autenticazione,")</label>
+</div>
+
+<button class="btn btn-primary" @onclick="StartLogin" disabled="@IsEmbeddedBrowser">@T("login.google", "Accedi con Google")</button>
 
 @code {
     private bool ShowExpiredMessage { get; set; }
+    private bool RememberLogin { get; set; }
+    private bool IsEmbeddedBrowser { get; set; }
     private bool isLocalizationSubscribed;
 
     protected override void OnInitialized()
@@ -32,6 +48,17 @@
         var query = ParseQuery(uri.Query);
         ShowExpiredMessage = query.TryGetValue("reason", out var value) &&
             string.Equals(value, "expired", StringComparison.OrdinalIgnoreCase);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        IsEmbeddedBrowser = await JS.InvokeAsync<bool>("bpAuth.isEmbeddedBrowser");
+        await InvokeAsync(StateHasChanged);
     }
 
     private static Dictionary<string, string> ParseQuery(string query)
@@ -56,7 +83,12 @@
 
     private async Task StartLogin()
     {
-        await AuthService.StartLoginAsync(CancellationToken.None);
+        if (IsEmbeddedBrowser)
+        {
+            return;
+        }
+
+        await AuthService.StartLoginAsync(RememberLogin, CancellationToken.None);
     }
 
     private void OnLanguageChanged()

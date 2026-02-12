@@ -9,9 +9,9 @@ namespace BloodPressure.Web.Services;
 
 public sealed class AuthApiClient(HttpClient httpClient)
 {
-    public async Task<LoginUrlResponse> GetLoginUrlAsync(CancellationToken cancellationToken = default)
+    public async Task<LoginUrlResponse> GetLoginUrlAsync(bool remember, CancellationToken cancellationToken = default)
     {
-        var response = await httpClient.GetFromJsonAsync<LoginUrlResponse>("login-url", cancellationToken);
+        var response = await httpClient.GetFromJsonAsync<LoginUrlResponse>($"login-url?remember={remember.ToString().ToLowerInvariant()}", cancellationToken);
         return response ?? throw new InvalidOperationException("Missing login url response.");
     }
 }

@@ -1,4 +1,5 @@
 @inject BloodPressure.Web.Services.LocalizationService LocalizationService
+@inject BloodPressure.Web.Services.ThemeService ThemeService
 
 @if (!_ready)
 {
@@ -31,6 +32,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         await LocalizationService.InitializeAsync();
+        await ThemeService.InitializeAsync();
         _ready = true;
     }
 }
