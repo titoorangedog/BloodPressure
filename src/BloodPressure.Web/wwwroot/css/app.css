@@ -163,6 +163,68 @@ code {
     height: 280px;
 }
 
+.language-panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 220px;
+    background: #ffffff;
+    border: 1px solid #d8dbe0;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+    z-index: 2100;
+}
+
+.language-panel-title {
+    font-size: 0.8rem;
+    color: #4a5568;
+    padding: 0.25rem 0.5rem 0.4rem 0.5rem;
+}
+
+.language-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: left;
+    padding: 0.45rem 0.5rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.language-option:hover {
+    background: #f3f4f6;
+}
+
+.language-option.active {
+    background: #e8f0fb;
+    font-weight: 600;
+}
+
+.language-option .flag {
+    width: 20px;
+    height: 15px;
+    border-radius: 2px;
+    object-fit: cover;
+    flex: 0 0 auto;
+}
+
+.language-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.language-trigger-flag {
+    width: 18px;
+    height: 14px;
+    border-radius: 2px;
+    object-fit: cover;
+}
+
 @media (max-width: 640px) {
     .chart-container {
         height: 220px;

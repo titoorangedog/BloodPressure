@@ -7,14 +7,16 @@
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject BloodPressure.Web.Services.ToastService ToastService
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@implements IDisposable
 
-<h1>@(IsEdit ? "Modifica rilevazione" : "Nuova rilevazione")</h1>
+<h1>@(IsEdit ? T("readingForm.title.edit", "Modifica rilevazione") : T("readingForm.title.new", "Nuova rilevazione"))</h1>
 
 @if (IsLoading)
 {
-    <p>Caricamento...</p>
+    <p>@T("common.loading", "Caricamento...")</p>
 }
 else
 {
@@ -25,13 +27,13 @@ else
         <div class="row g-3">
             <div class="col-12 col-lg-3">
                 <div class="mb-3">
-                    <label class="form-label">Data (locale)</label>
+                    <label class="form-label">@T("readingForm.dateLocal", "Data (locale)")</label>
                     <InputDate class="form-control" @bind-Value="Model.DateLocal" @onchange="OnDateOrTimeChanged" />
                 </div>
             </div>
             <div class="col-12 col-lg-3">
                 <div class="mb-3">
-                    <label class="form-label">Ora (locale)</label>
+                    <label class="form-label">@T("readingForm.timeLocal", "Ora (locale)")</label>
                     <input class="form-control bp-timepicker"
                            type="text"
                            inputmode="numeric"
@@ -39,38 +41,38 @@ else
                            @bind-value="Model.TimeLocalText"
                            @bind-value:event="oninput"
                            @onchange="OnDateOrTimeChanged" />
-                    <div class="form-text">Formato 24 ore (HH:mm).</div>
+                    <div class="form-text">@T("readingForm.timeHelp", "Formato 24 ore (HH:mm).")</div>
                 </div>
             </div>
             <div class="col-12 col-lg-3">
                 <div class="mb-3">
-                    <label class="form-label">Sistolica</label>
+                    <label class="form-label">@T("readings.table.systolic", "Sistolica")</label>
                     <InputNumber class="form-control" @bind-Value="Model.Systolic" />
                 </div>
             </div>
             <div class="col-12 col-lg-3">
                 <div class="mb-3">
-                    <label class="form-label">Diastolica</label>
+                    <label class="form-label">@T("readings.table.diastolic", "Diastolica")</label>
                     <InputNumber class="form-control" @bind-Value="Model.Diastolic" />
                 </div>
             </div>
 
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
-                    <label class="form-label">Peso (kg)</label>
+                    <label class="form-label">@T("readingForm.weight", "Peso (kg)")</label>
                     <InputNumber class="form-control" @bind-Value="Model.WeightKg" />
                 </div>
             </div>
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
-                    <label class="form-label">Heart rate</label>
+                    <label class="form-label">@T("readingForm.heartRate", "Heart rate")</label>
                     <InputNumber class="form-control" @bind-Value="Model.HeartRate" />
                 </div>
             </div>
 
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
-                    <label class="form-label">Posizione</label>
+                    <label class="form-label">@T("readingForm.position", "Posizione")</label>
                     <InputSelect class="form-select" @bind-Value="Model.Position">
                         @foreach (var value in Enum.GetValues<Position>())
                         {
@@ -81,9 +83,9 @@ else
             </div>
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
-                    <label class="form-label">Attivita sportiva</label>
+                    <label class="form-label">@T("readingForm.sportActivity", "Attivita sportiva")</label>
                     <InputSelect class="form-select" @bind-Value="Model.SportActivityOptionId">
-                        <option value="">(non selezionato)</option>
+                        <option value="">@T("readingForm.notSelected", "(non selezionato)")</option>
                         @foreach (var option in Options.SportActivityOptions)
                         {
                             <option value="@option.Id">@option.Name</option>
@@ -94,13 +96,13 @@ else
 
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
-                    <label class="form-label">Farmaco saltato</label>
+                    <label class="form-label">@T("readingForm.medicationSkipped", "Farmaco saltato")</label>
                     <InputCheckbox class="form-check-input" @bind-Value="Model.MedicationSkipped" />
                 </div>
             </div>
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
-                    <label class="form-label">Sintomi</label>
+                    <label class="form-label">@T("readingForm.symptoms", "Sintomi")</label>
                     @foreach (var option in Options.SymptomOptions)
                     {
                         <div class="form-check">
@@ -114,7 +116,7 @@ else
 
             <div class="col-12">
                 <div class="mb-3">
-                    <label class="form-label">Note</label>
+                    <label class="form-label">@T("readingForm.notes", "Note")</label>
                     <InputTextArea class="form-control" @bind-Value="Model.Notes" />
                 </div>
             </div>
@@ -124,14 +126,14 @@ else
             @if (IsSaving)
             {
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                <span>Salvataggio...</span>
+                <span>@T("common.saving", "Salvataggio...")</span>
             }
             else
             {
-                <span>Salva</span>
+                <span>@T("common.save", "Salva")</span>
             }
         </button>
-        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel" disabled="@IsSaving">Annulla</button>
+        <button class="btn btn-secondary ms-2" type="button" @onclick="Cancel" disabled="@IsSaving">@T("common.cancel", "Annulla")</button>
     </EditForm>
 }
 
@@ -150,9 +152,16 @@ else
     private List<TimeSlotDefinitionDto> TimeSlotDefinitions { get; set; } = new();
     private LicenseType? ActiveLicenseType { get; set; }
     private ReadingFormModel Model { get; set; } = new();
+    private bool isLocalizationSubscribed;
 
     protected override async Task OnInitializedAsync()
     {
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
+        }
+
         Options = await ReadApiClient.GetOptionsAsync(CancellationToken.None);
         var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
         ActiveLicenseType = license?.Type;
@@ -199,7 +208,7 @@ else
         var request = Model.ToCreateRequest();
         if (ActiveLicenseType == LicenseType.Free && request.TimestampUtc < DateTimeOffset.UtcNow.AddDays(-30))
         {
-            ToastService.Show("Impossibile salvare a causa delle limitazioni della licenza.", ToastLevel.Error, 7000);
+            ToastService.Show(T("readingForm.freeLicenseSaveBlocked", "Impossibile salvare a causa delle limitazioni della licenza."), ToastLevel.Error, 7000);
             return;
         }
 
@@ -215,12 +224,12 @@ else
                 await WriteApiClient.CreateReadingAsync(request, CancellationToken.None);
             }
 
-            ToastService.Show("Salvataggio completato", ToastLevel.Success);
+            ToastService.Show(T("common.saveSuccess", "Salvataggio completato"), ToastLevel.Success);
             Navigation.NavigateTo("/readings");
         }
         catch (Exception ex)
         {
-            ToastService.Show("Errore in fase di salvataggio", ToastLevel.Error, 6000);
+            ToastService.Show(T("common.saveError", "Errore in fase di salvataggio"), ToastLevel.Error, 6000);
             ToastService.Show(ex.Message, ToastLevel.Error, 8000);
         }
         finally
@@ -356,12 +365,12 @@ else
 
         return part switch
         {
-            DayPart.Morning => "Mattino",
-            DayPart.Midday => "Mezzo giorno",
-            DayPart.Afternoon => "Pomeriggio",
-            DayPart.Evening => "Sera",
-            DayPart.Night => "Notte",
-            _ => "Non definito"
+            DayPart.Morning => T("daypart.morning", "Mattino"),
+            DayPart.Midday => T("daypart.midday", "Mezzo giorno"),
+            DayPart.Afternoon => T("daypart.afternoon", "Pomeriggio"),
+            DayPart.Evening => T("daypart.evening", "Sera"),
+            DayPart.Night => T("daypart.night", "Notte"),
+            _ => T("daypart.undefined", "Non definito")
         };
     }
 
@@ -460,6 +469,21 @@ else
         Evening,
         Night
     }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
 
     private sealed class ReadingFormModel
     {

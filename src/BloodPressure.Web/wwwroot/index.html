@@ -67,6 +67,26 @@
                 });
             }
         };
+
+        window.bpLocalization = {
+            getLanguage: function (key) {
+                try {
+                    return localStorage.getItem(key);
+                } catch {
+                    return null;
+                }
+            },
+            setLanguage: function (key, value) {
+                try {
+                    localStorage.setItem(key, value);
+                } catch { }
+            },
+            applyDocumentLanguage: function (langCode) {
+                if (!langCode) return;
+                document.documentElement.lang = langCode;
+            }
+        };
+
         document.addEventListener("DOMContentLoaded", function () {
             window.bpTimePicker.init();
         });

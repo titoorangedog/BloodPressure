@@ -5,10 +5,12 @@
 @using System.Globalization
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@implements IDisposable
 
-<h1>Rilevazioni</h1>
+<h1>@T("readings.title", "Rilevazioni")</h1>
 
 <style>
     .day-separator td {
@@ -30,21 +32,21 @@
 </style>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
-    <button class="btn btn-primary" @onclick="CreateNew">Nuova rilevazione</button>
-    <button class="btn btn-outline-primary" @onclick="ToggleExportPanel">Esporta dati</button>
-    <button class="btn btn-outline-secondary" @onclick="ToggleImportPanel">Importa dati</button>
+    <button class="btn btn-primary" @onclick="CreateNew">@T("readings.new", "Nuova rilevazione")</button>
+    <button class="btn btn-outline-primary" @onclick="ToggleExportPanel">@T("readings.exportData", "Esporta dati")</button>
+    <button class="btn btn-outline-secondary" @onclick="ToggleImportPanel">@T("readings.importData", "Importa dati")</button>
 </div>
 
 <div class="card mb-3">
     <div class="card-body">
-        <h5 class="card-title">Filtro periodo</h5>
+        <h5 class="card-title">@T("readings.filter.title", "Filtro periodo")</h5>
         <div class="row g-2 align-items-end">
             <div class="col-12 col-md-4">
-                <label class="form-label">Data inizio</label>
+                <label class="form-label">@T("readings.filter.from", "Data inizio")</label>
                 <InputDate class="form-control" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" min="@GetMinFilterFromDateAttribute()" />
             </div>
             <div class="col-12 col-md-4">
-                <label class="form-label">Data fine</label>
+                <label class="form-label">@T("readings.filter.to", "Data fine")</label>
                 <InputDate class="form-control" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
             </div>
             <div class="col-12 col-md-4">
@@ -53,7 +55,7 @@
                     {
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     }
-                    Filtra
+                    @T("readings.filter.apply", "Filtra")
                 </button>
             </div>
         </div>
@@ -68,7 +70,7 @@
 @if (ErrorMessages.Count > 0)
 {
     <div class="alert alert-danger" role="alert">
-        <strong>Import fallito.</strong>
+        <strong>@T("readings.import.failed", "Import fallito.")</strong>
         <ul class="mb-0">
             @foreach (var error in ErrorMessages)
             {
@@ -89,19 +91,19 @@
         <div class="card-body position-relative">
             <button type="button"
                     class="panel-close"
-                    aria-label="Chiudi pannello export"
+                    aria-label="@T("readings.export.closePanel", "Chiudi pannello export")"
                     @onclick="HideExportPanel">&times;</button>
-            <h5 class="card-title">Esporta rilevazioni</h5>
-            <p class="card-text">Scarica tutte le rilevazioni in formato Excel o XML.</p>
+            <h5 class="card-title">@T("readings.export.title", "Esporta rilevazioni")</h5>
+            <p class="card-text">@T("readings.export.description", "Scarica tutte le rilevazioni in formato Excel o XML.")</p>
             <div class="d-flex flex-wrap gap-2">
-                <button class="btn btn-success" @onclick="ExportExcel">Scarica Excel</button>
-                <button class="btn btn-outline-success" @onclick="ExportXml">Scarica XML</button>
+                <button class="btn btn-success" @onclick="ExportExcel">@T("readings.export.downloadExcel", "Scarica Excel")</button>
+                <button class="btn btn-outline-success" @onclick="ExportXml">@T("readings.export.downloadXml", "Scarica XML")</button>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-2">
-                <button class="btn btn-outline-secondary" @onclick="DownloadTemplateExcel">Template Excel</button>
-                <button class="btn btn-outline-secondary" @onclick="DownloadTemplateXml">Template XML</button>
-                <button class="btn btn-outline-secondary" @onclick="DownloadExampleExcel">Esempio compilato Excel</button>
-                <button class="btn btn-outline-secondary" @onclick="DownloadExampleXml">Esempio compilato XML</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadTemplateExcel">@T("readings.export.templateExcel", "Template Excel")</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadTemplateXml">@T("readings.export.templateXml", "Template XML")</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadExampleExcel">@T("readings.export.exampleExcel", "Esempio compilato Excel")</button>
+                <button class="btn btn-outline-secondary" @onclick="DownloadExampleXml">@T("readings.export.exampleXml", "Esempio compilato XML")</button>
             </div>
         </div>
     </div>
@@ -113,12 +115,12 @@
         <div class="card-body position-relative">
             <button type="button"
                     class="panel-close"
-                    aria-label="Chiudi pannello import"
+                    aria-label="@T("readings.import.closePanel", "Chiudi pannello import")"
                     @onclick="HideImportPanel">&times;</button>
-            <h5 class="card-title">Importa rilevazioni</h5>
-            <p class="card-text">Carica un file Excel o XML con tutte le informazioni delle rilevazioni.</p>
+            <h5 class="card-title">@T("readings.import.title", "Importa rilevazioni")</h5>
+            <p class="card-text">@T("readings.import.description", "Carica un file Excel o XML con tutte le informazioni delle rilevazioni.")</p>
             <div class="mb-3">
-                <h6 class="mb-2">Campi richiesti</h6>
+                <h6 class="mb-2">@T("readings.import.requiredFields", "Campi richiesti")</h6>
                 <ul class="mb-0">
                     <li>DateUtc</li>
                     <li>TimeUtc</li>
@@ -126,7 +128,7 @@
                     <li>Diastolic</li>
                 </ul>
                 <div class="mt-2 small text-muted">
-                    Gli altri campi sono facoltativi. Per opzioni puoi usare gli ID oppure i nomi (TimeSlotName, SportActivityName, SymptomOptionNames).
+                    @T("readings.import.optionalFieldsHint", "Gli altri campi sono facoltativi. Per opzioni puoi usare gli ID oppure i nomi (TimeSlotName, SportActivityName, SymptomOptionNames).")
                 </div>
             </div>
             <div class="row g-3">
@@ -139,7 +141,7 @@
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                             }
-                            Carica Excel
+                            @T("readings.import.uploadExcel", "Carica Excel")
                         </button>
                     </div>
                 </div>
@@ -152,7 +154,7 @@
                             {
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                             }
-                            Carica XML
+                            @T("readings.import.uploadXml", "Carica XML")
                         </button>
                     </div>
                 </div>
@@ -163,25 +165,25 @@
 
 @if (IsLoading)
 {
-    <p>Caricamento...</p>
+    <p>@T("common.loading", "Caricamento...")</p>
 }
 else if (ReadingItems.Count == 0)
 {
-    <p>Nessuna rilevazione trovata.</p>
+    <p>@T("readings.empty", "Nessuna rilevazione trovata.")</p>
 }
 else
 {
     <table class="table table-striped">
         <thead>
         <tr>
-            <th>Data</th>
-            <th>Ora</th>
-            <th>Fascia</th>
-            <th>Sistolica</th>
-            <th>Diastolica</th>
-            <th>FC</th>
-            <th>Peso</th>
-            <th>Severita</th>
+            <th>@T("readings.table.date", "Data")</th>
+            <th>@T("readings.table.time", "Ora")</th>
+            <th>@T("readings.table.timeslot", "Fascia")</th>
+            <th>@T("readings.table.systolic", "Sistolica")</th>
+            <th>@T("readings.table.diastolic", "Diastolica")</th>
+            <th>@T("readings.table.heartRate", "FC")</th>
+            <th>@T("readings.table.weight", "Peso")</th>
+            <th>@T("readings.table.severity", "Severita")</th>
             <th></th>
         </tr>
         </thead>
@@ -208,25 +210,29 @@ else
                 <td>@reading.HeartRate</td>
                 <td>@reading.WeightKg</td>
                 <td>
-                    <span class="badge me-2 @GetSeverityClass(ClassifyValue(reading.Systolic, Thresholds.Systolic))">
-                        S: @ClassifyValue(reading.Systolic, Thresholds.Systolic)
+                    @{
+                        var systolicSeverity = ClassifyValue(reading.Systolic, Thresholds.Systolic);
+                        var diastolicSeverity = ClassifyValue(reading.Diastolic, Thresholds.Diastolic);
+                    }
+                    <span class="badge me-2 @GetSeverityClass(systolicSeverity)">
+                        S: @GetSeverityLabel(systolicSeverity)
                     </span>
-                    <span class="badge @GetSeverityClass(ClassifyValue(reading.Diastolic, Thresholds.Diastolic))">
-                        D: @ClassifyValue(reading.Diastolic, Thresholds.Diastolic)
+                    <span class="badge @GetSeverityClass(diastolicSeverity)">
+                        D: @GetSeverityLabel(diastolicSeverity)
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center gap-1" @onclick="() => Edit(reading.Id)" aria-label="Modifica rilevazione" title="Modifica">
+                    <button class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center gap-1" @onclick="() => Edit(reading.Id)" aria-label="@T("readings.actions.editAria", "Modifica rilevazione")" title="@T("readings.actions.edit", "Modifica")">
                         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                             <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25Zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58ZM20.71 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.5 1.5 3.75 3.75 1.5-1.51Z"/>
                         </svg>
-                        <span>Modifica</span>
+                        <span>@T("readings.actions.edit", "Modifica")</span>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" @onclick="() => RequestDelete(reading)" aria-label="Elimina rilevazione" title="Elimina">
+                    <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" @onclick="() => RequestDelete(reading)" aria-label="@T("readings.actions.deleteAria", "Elimina rilevazione")" title="@T("readings.actions.delete", "Elimina")">
                         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                             <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2v9H7V9Zm-1 12h12a2 2 0 0 0 2-2V8H4v11a2 2 0 0 0 2 2Z"/>
                         </svg>
-                        <span>Elimina</span>
+                        <span>@T("readings.actions.delete", "Elimina")</span>
                     </button>
                 </td>
             </tr>
@@ -239,20 +245,20 @@ else
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="deleteReadingModalLabel">Conferma eliminazione</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+                <h5 class="modal-title" id="deleteReadingModalLabel">@T("readings.deleteModal.title", "Conferma eliminazione")</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T("common.close", "Chiudi")"></button>
             </div>
             <div class="modal-body">
-                <p>Vuoi eliminare definitivamente la rilevazione selezionata?</p>
+                <p>@T("readings.deleteModal.confirmText", "Vuoi eliminare definitivamente la rilevazione selezionata?")</p>
                 @if (PendingDeleteTimestampUtc.HasValue)
                 {
-                    <div class="text-muted small">Data: @FormatCetDate(PendingDeleteTimestampUtc.Value)</div>
-                    <div class="text-muted small">Ora: @FormatCetTime(PendingDeleteTimestampUtc.Value)</div>
+                    <div class="text-muted small">@T("readings.table.date", "Data"): @FormatCetDate(PendingDeleteTimestampUtc.Value)</div>
+                    <div class="text-muted small">@T("readings.table.time", "Ora"): @FormatCetTime(PendingDeleteTimestampUtc.Value)</div>
                 }
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annulla</button>
-                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Elimina</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T("common.cancel", "Annulla")</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">@T("readings.actions.delete", "Elimina")</button>
             </div>
         </div>
     </div>
@@ -298,6 +304,7 @@ else
     private DateOnly FilterFromDate { get; set; }
     private DateOnly FilterToDate { get; set; }
     private LicenseType? ActiveLicenseType { get; set; }
+    private bool isLocalizationSubscribed;
 
     private bool IsImportingAny => IsImportingExcel || IsImportingXml;
     private bool CanImportExcel => ExcelFile is not null && !IsImportingAny;
@@ -305,6 +312,12 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
+        }
+
         var todayCet = DateOnly.FromDateTime(ToCet(DateTimeOffset.UtcNow).DateTime);
         var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
         ActiveLicenseType = license?.Type;
@@ -338,7 +351,7 @@ else
         if (FilterFromDate > FilterToDate)
         {
             ClearMessages();
-            InfoMessage = "La data di inizio deve essere precedente o uguale alla data di fine.";
+            InfoMessage = T("common.dateRangeInvalid", "La data di inizio deve essere precedente o uguale alla data di fine.");
             return;
         }
 
@@ -350,7 +363,7 @@ else
             {
                 FilterFromDate = minFromDate;
                 ClearMessages();
-                InfoMessage = "Con licenza Free puoi visualizzare solo le rilevazioni degli ultimi 30 giorni.";
+                InfoMessage = T("readings.freeLimit.last30Days", "Con licenza Free puoi visualizzare solo le rilevazioni degli ultimi 30 giorni.");
             }
         }
 
@@ -473,7 +486,7 @@ else
         if (ExcelFile is null)
         {
             ClearMessages();
-            InfoMessage = "Seleziona un file Excel.";
+            InfoMessage = T("readings.import.selectExcel", "Seleziona un file Excel.");
             return;
         }
 
@@ -482,7 +495,10 @@ else
         try
         {
             var result = await WriteApiClient.ImportExcelAsync(ExcelFile, CancellationToken.None);
-            SuccessMessage = $"Import completato. Inserite: {result.ImportedCount}. Duplicati ignorati: {result.SkippedDuplicates}. Totale: {result.TotalCount}.";
+            SuccessMessage = T("readings.import.success", "Import completato. Inserite: {0}. Duplicati ignorati: {1}. Totale: {2}.")
+                .Replace("{0}", result.ImportedCount.ToString(CultureInfo.InvariantCulture))
+                .Replace("{1}", result.SkippedDuplicates.ToString(CultureInfo.InvariantCulture))
+                .Replace("{2}", result.TotalCount.ToString(CultureInfo.InvariantCulture));
             await LoadAsync();
         }
         catch (ImportException ex)
@@ -504,7 +520,7 @@ else
         if (XmlFile is null)
         {
             ClearMessages();
-            InfoMessage = "Seleziona un file XML.";
+            InfoMessage = T("readings.import.selectXml", "Seleziona un file XML.");
             return;
         }
 
@@ -513,7 +529,10 @@ else
         try
         {
             var result = await WriteApiClient.ImportXmlAsync(XmlFile, CancellationToken.None);
-            SuccessMessage = $"Import completato. Inserite: {result.ImportedCount}. Duplicati ignorati: {result.SkippedDuplicates}. Totale: {result.TotalCount}.";
+            SuccessMessage = T("readings.import.success", "Import completato. Inserite: {0}. Duplicati ignorati: {1}. Totale: {2}.")
+                .Replace("{0}", result.ImportedCount.ToString(CultureInfo.InvariantCulture))
+                .Replace("{1}", result.SkippedDuplicates.ToString(CultureInfo.InvariantCulture))
+                .Replace("{2}", result.TotalCount.ToString(CultureInfo.InvariantCulture));
             await LoadAsync();
         }
         catch (ImportException ex)
@@ -541,6 +560,13 @@ else
     {
         return GetDayPartLabel(GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions()));
     }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
 
     private static readonly CultureInfo CetCulture = CultureInfo.GetCultureInfo("it-IT");
     private const string CetDateFormat = "dd/MM/yyyy";
@@ -615,20 +641,14 @@ else
 
     private string GetDayPartLabel(DayPart part)
     {
-        var definition = GetDefinitions().FirstOrDefault(d => GetDayPartFromKey(d.Key) == part);
-        if (!string.IsNullOrWhiteSpace(definition?.Label))
-        {
-            return definition!.Label;
-        }
-
         return part switch
         {
-            DayPart.Morning => "Mattino",
-            DayPart.Midday => "Mezzo giorno",
-            DayPart.Afternoon => "Pomeriggio",
-            DayPart.Evening => "Sera",
-            DayPart.Night => "Notte",
-            _ => "Non definito"
+            DayPart.Morning => T("daypart.morning", "Mattino"),
+            DayPart.Midday => T("daypart.midday", "Mezzo giorno"),
+            DayPart.Afternoon => T("daypart.afternoon", "Pomeriggio"),
+            DayPart.Evening => T("daypart.evening", "Sera"),
+            DayPart.Night => T("daypart.night", "Notte"),
+            _ => T("daypart.undefined", "Non definito")
         };
     }
 
@@ -726,6 +746,14 @@ else
         Night
     }
 
+    public void Dispose()
+    {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
+    }
+
     private static string GetSeverityClass(Severity severity)
     {
         return severity switch
@@ -748,6 +776,19 @@ else
         if (value <= thresholds.WarningHighMax) return Severity.High;
         if (value >= thresholds.VeryHighMin) return Severity.VeryHigh;
         return Severity.High;
+    }
+
+    private string GetSeverityLabel(Severity severity)
+    {
+        return severity switch
+        {
+            Severity.Normal => T("severity.normal", "Normale"),
+            Severity.VeryLow => T("severity.veryLow", "Molto bassa"),
+            Severity.VeryHigh => T("severity.veryHigh", "Molto alta"),
+            Severity.Low => T("severity.low", "Bassa"),
+            Severity.High => T("severity.high", "Alta"),
+            _ => severity.ToString()
+        };
     }
 }
 

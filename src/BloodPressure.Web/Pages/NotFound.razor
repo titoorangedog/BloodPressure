@@ -1,2 +1,33 @@
-<h1>Pagina non trovata</h1>
-<p>La pagina richiesta non esiste.</p>
+@inject BloodPressure.Web.Services.LocalizationService LocalizationService
+@implements IDisposable
+
+<h1>@T("notfound.title", "Pagina non trovata")</h1>
+<p>@T("notfound.description", "La pagina richiesta non esiste.")</p>
+
+@code {
+    private bool isLocalizationSubscribed;
+
+    protected override void OnInitialized()
+    {
+        if (!isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged += OnLanguageChanged;
+            isLocalizationSubscribed = true;
+        }
+    }
+
+    private void OnLanguageChanged()
+    {
+        _ = InvokeAsync(StateHasChanged);
+    }
+
+    private string T(string key, string fallback) => LocalizationService.T(key, fallback);
+
+    public void Dispose()
+    {
+        if (isLocalizationSubscribed)
+        {
+            LocalizationService.LanguageChanged -= OnLanguageChanged;
+        }
+    }
+}
