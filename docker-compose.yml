@@ -26,7 +26,7 @@ services:
       - Jwt__Issuer=BloodPressure
       - Jwt__Audience=BloodPressure.Client
       - Jwt__SigningKey=${JWT_SIGNING_KEY}
-      - Jwt__AccessTokenMinutes=60
+      - Jwt__AccessTokenMinutes=1440
       - GoogleOAuth__ClientId=${GOOGLE_CLIENT_ID}
       - GoogleOAuth__ClientSecret=${GOOGLE_CLIENT_SECRET}
       - GoogleOAuth__CallbackUrl=${GOOGLE_CALLBACK_URL}
@@ -70,7 +70,7 @@ services:
       - Jwt__Issuer=BloodPressure
       - Jwt__Audience=BloodPressure.Client
       - Jwt__SigningKey=${JWT_SIGNING_KEY}
-      - Jwt__AccessTokenMinutes=60
+      - Jwt__AccessTokenMinutes=1440
       - ClinicalThresholds__Systolic__VeryLowMax=79
       - ClinicalThresholds__Systolic__LowMax=99
       - ClinicalThresholds__Systolic__NormalLowMax=109
@@ -109,7 +109,7 @@ services:
       - Jwt__Issuer=BloodPressure
       - Jwt__Audience=BloodPressure.Client
       - Jwt__SigningKey=${JWT_SIGNING_KEY}
-      - Jwt__AccessTokenMinutes=60
+      - Jwt__AccessTokenMinutes=1440
       - Cors__AllowedOrigins__0=${WEBCLIENT_BASE_URL}
       - ClinicalThresholds__Systolic__VeryLowMax=79
       - ClinicalThresholds__Systolic__LowMax=99
@@ -148,7 +148,7 @@ services:
       - Jwt__Issuer=BloodPressure
       - Jwt__Audience=BloodPressure.Client
       - Jwt__SigningKey=${JWT_SIGNING_KEY}
-      - Jwt__AccessTokenMinutes=60
+      - Jwt__AccessTokenMinutes=1440
     ports:
       - "7004:8080"
     depends_on:
