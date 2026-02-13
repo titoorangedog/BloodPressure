@@ -7,8 +7,12 @@
     <title>BloodPressure.Web</title>
     <base href="/" />
     <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/material3.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/material_blue.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="BloodPressure.Web.styles.css" rel="stylesheet" />
@@ -34,61 +38,47 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/charts.js"></script>
-    <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/material-timepicker.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         window.bpModal = {
             show: function (id) {
                 var element = document.getElementById(id);
                 if (!element) return;
-                bootstrap.Modal.getOrCreateInstance(element).show();
+                if (element.classList.contains("show")) return;
+
+                element.classList.add("show");
+                element.style.display = "block";
+                element.removeAttribute("aria-hidden");
+                element.setAttribute("aria-modal", "true");
+                element.setAttribute("role", "dialog");
+                document.body.classList.add("modal-open");
+
+                var backdrop = document.createElement("div");
+                backdrop.className = "modal-backdrop fade show";
+                backdrop.setAttribute("data-bp-backdrop-for", id);
+                backdrop.addEventListener("click", function () {
+                    window.bpModal.hide(id);
+                });
+                document.body.appendChild(backdrop);
             },
             hide: function (id) {
                 var element = document.getElementById(id);
                 if (!element) return;
-                bootstrap.Modal.getOrCreateInstance(element).hide();
-            }
-        };
 
-        window.bpPickers = {
-            initTime: function () {
-                if (!window.flatpickr) return;
-                var elements = document.querySelectorAll(".bp-timepicker");
-                elements.forEach(function (el) {
-                    if (el._flatpickr) return;
-                    flatpickr(el, {
-                        enableTime: true,
-                        noCalendar: true,
-                        dateFormat: "H:i",
-                        time_24hr: true,
-                        minuteIncrement: 1,
-                        allowInput: true
-                    });
-                });
-            },
-            initDate: function () {
-                if (!window.flatpickr) return;
-                var elements = document.querySelectorAll(".bp-datepicker");
-                elements.forEach(function (el) {
-                    if (el._flatpickr) return;
-                    flatpickr(el, {
-                        dateFormat: "Y-m-d",
-                        allowInput: true
-                    });
-                });
-            },
-            init: function () {
-                window.bpPickers.initDate();
-                window.bpPickers.initTime();
-            },
-            observe: function () {
-                if (window.bpPickers._observer) return;
-                var root = document.getElementById("app");
-                if (!root) return;
-                window.bpPickers._observer = new MutationObserver(function () {
-                    window.bpPickers.init();
-                });
-                window.bpPickers._observer.observe(root, { childList: true, subtree: true });
+                element.classList.remove("show");
+                element.style.display = "none";
+                element.setAttribute("aria-hidden", "true");
+                element.removeAttribute("aria-modal");
+
+                var backdrop = document.querySelector('[data-bp-backdrop-for="' + id + '"]');
+                if (backdrop) {
+                    backdrop.remove();
+                }
+
+                if (!document.querySelector(".modal.show")) {
+                    document.body.classList.remove("modal-open");
+                }
             }
         };
 
@@ -147,7 +137,61 @@
             }
         };
 
+        window.bpPickers = {
+            initTime: function () {
+                var elements = document.querySelectorAll(".bp-timepicker");
+                if (!window.bpMaterialTimePicker) return;
+                window.bpMaterialTimePicker.attach(elements);
+            },
+            initDate: function () {
+                if (!window.flatpickr) return;
+                var elements = document.querySelectorAll(".bp-datepicker");
+                elements.forEach(function (el) {
+                    if (el._flatpickr) return;
+                    if (el.type !== "text") {
+                        el.type = "text";
+                    }
+
+                    flatpickr(el, {
+                        dateFormat: "Y-m-d",
+                        allowInput: true,
+                        disableMobile: true
+                    });
+                });
+            },
+            init: function () {
+                window.bpPickers.initDate();
+                window.bpPickers.initTime();
+            },
+            observe: function () {
+                if (window.bpPickers._observer) return;
+                var root = document.getElementById("app");
+                if (!root) return;
+                window.bpPickers._observer = new MutationObserver(function () {
+                    window.bpPickers.init();
+                });
+                window.bpPickers._observer.observe(root, { childList: true, subtree: true });
+            }
+        };
+
         document.addEventListener("DOMContentLoaded", function () {
+            document.addEventListener("click", function (event) {
+                var dismissButton = event.target.closest("[data-bs-dismiss='modal']");
+                if (!dismissButton) return;
+                var modal = dismissButton.closest(".modal");
+                if (modal && modal.id) {
+                    window.bpModal.hide(modal.id);
+                }
+            });
+
+            document.addEventListener("keydown", function (event) {
+                if (event.key !== "Escape") return;
+                var modal = document.querySelector(".modal.show");
+                if (modal && modal.id) {
+                    window.bpModal.hide(modal.id);
+                }
+            });
+
             window.bpPickers.init();
             window.bpPickers.observe();
             var currentTheme = window.bpTheme.getTheme("bp.theme") || window.bpTheme.getSystemTheme();
