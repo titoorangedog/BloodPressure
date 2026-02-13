@@ -29,6 +29,46 @@
         cursor: pointer;
         padding: 0;
     }
+
+    .reading-mobile-card {
+        border: 1px solid var(--bs-border-color);
+        border-radius: 0.5rem;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        background: var(--bs-body-bg);
+    }
+
+    .reading-mobile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.5rem 0.75rem;
+    }
+
+    .reading-mobile-field {
+        min-width: 0;
+    }
+
+    .reading-mobile-label {
+        font-size: 0.8rem;
+        color: var(--bs-secondary-color);
+        margin-bottom: 0.1rem;
+    }
+
+    .reading-mobile-value {
+        font-size: 0.95rem;
+        line-height: 1.25;
+        word-break: break-word;
+    }
+
+    .reading-mobile-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+
+    .reading-mobile-actions .btn {
+        flex: 1 1 auto;
+    }
 </style>
 
 <div class="d-flex flex-wrap gap-2 mb-3">
@@ -173,72 +213,143 @@ else if (ReadingItems.Count == 0)
 }
 else
 {
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>@T("readings.table.date", "Data")</th>
-            <th>@T("readings.table.time", "Ora")</th>
-            <th>@T("readings.table.timeslot", "Fascia")</th>
-            <th>@T("readings.table.systolic", "Sistolica")</th>
-            <th>@T("readings.table.diastolic", "Diastolica")</th>
-            <th>@T("readings.table.heartRate", "FC")</th>
-            <th>@T("readings.table.weight", "Peso")</th>
-            <th>@T("readings.table.severity", "Severita")</th>
-            <th></th>
-        </tr>
-        </thead>
-        <tbody>
-        @{
-            DateOnly? previousDate = null;
-        }
+    <div class="d-none d-md-block">
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>@T("readings.table.date", "Data")</th>
+                <th>@T("readings.table.time", "Ora")</th>
+                <th>@T("readings.table.timeslot", "Fascia")</th>
+                <th>@T("readings.table.systolic", "Sistolica")</th>
+                <th>@T("readings.table.diastolic", "Diastolica")</th>
+                <th>@T("readings.table.heartRate", "FC")</th>
+                <th>@T("readings.table.weight", "Peso")</th>
+                <th>@T("readings.table.severity", "Severita")</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            @{
+                DateOnly? previousDate = null;
+            }
+            @foreach (var reading in ReadingItems)
+            {
+                var currentDate = DateOnly.FromDateTime(ToCet(reading.TimestampUtc).DateTime);
+                var isNewDay = previousDate.HasValue && previousDate.Value != currentDate;
+                previousDate = currentDate;
+                <tr class="@(isNewDay ? "day-separator" : string.Empty)">
+                    <td>@FormatCetDate(reading.TimestampUtc)</td>
+                    <td>@FormatCetTime(reading.TimestampUtc)</td>
+                    <td class="align-middle">
+                        <span class="d-inline-flex align-items-center gap-2 lh-1">
+                            @GetDayPartIcon(GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions()))
+                            <span class="lh-1">@GetTimeSlotLabel(reading)</span>
+                        </span>
+                    </td>
+                    <td>@reading.Systolic</td>
+                    <td>@reading.Diastolic</td>
+                    <td>@reading.HeartRate</td>
+                    <td>@reading.WeightKg</td>
+                    <td>
+                        @{
+                            var systolicSeverity = ClassifyValue(reading.Systolic, Thresholds.Systolic);
+                            var diastolicSeverity = ClassifyValue(reading.Diastolic, Thresholds.Diastolic);
+                        }
+                        <span class="badge me-2 @GetSeverityClass(systolicSeverity)">
+                            S: @GetSeverityLabel(systolicSeverity)
+                        </span>
+                        <span class="badge @GetSeverityClass(diastolicSeverity)">
+                            D: @GetSeverityLabel(diastolicSeverity)
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center gap-1" @onclick="() => Edit(reading.Id)" aria-label="@T("readings.actions.editAria", "Modifica rilevazione")" title="@T("readings.actions.edit", "Modifica")">
+                            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25Zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58ZM20.71 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.5 1.5 3.75 3.75 1.5-1.51Z"/>
+                            </svg>
+                            <span>@T("readings.actions.edit", "Modifica")</span>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" @onclick="() => RequestDelete(reading)" aria-label="@T("readings.actions.deleteAria", "Elimina rilevazione")" title="@T("readings.actions.delete", "Elimina")">
+                            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2v9H7V9Zm-1 12h12a2 2 0 0 0 2-2V8H4v11a2 2 0 0 0 2 2Z"/>
+                            </svg>
+                            <span>@T("readings.actions.delete", "Elimina")</span>
+                        </button>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="d-md-none">
         @foreach (var reading in ReadingItems)
         {
-            var currentDate = DateOnly.FromDateTime(ToCet(reading.TimestampUtc).DateTime);
-            var isNewDay = previousDate.HasValue && previousDate.Value != currentDate;
-            previousDate = currentDate;
-            <tr class="@(isNewDay ? "day-separator" : string.Empty)">
-                <td>@FormatCetDate(reading.TimestampUtc)</td>
-                <td>@FormatCetTime(reading.TimestampUtc)</td>
-                <td class="align-middle">
-                    <span class="d-inline-flex align-items-center gap-2 lh-1">
-                        @GetDayPartIcon(GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions()))
-                        <span class="lh-1">@GetTimeSlotLabel(reading)</span>
-                    </span>
-                </td>
-                <td>@reading.Systolic</td>
-                <td>@reading.Diastolic</td>
-                <td>@reading.HeartRate</td>
-                <td>@reading.WeightKg</td>
-                <td>
-                    @{
-                        var systolicSeverity = ClassifyValue(reading.Systolic, Thresholds.Systolic);
-                        var diastolicSeverity = ClassifyValue(reading.Diastolic, Thresholds.Diastolic);
-                    }
-                    <span class="badge me-2 @GetSeverityClass(systolicSeverity)">
-                        S: @GetSeverityLabel(systolicSeverity)
-                    </span>
-                    <span class="badge @GetSeverityClass(diastolicSeverity)">
-                        D: @GetSeverityLabel(diastolicSeverity)
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-outline-secondary me-2 d-inline-flex align-items-center gap-1" @onclick="() => Edit(reading.Id)" aria-label="@T("readings.actions.editAria", "Modifica rilevazione")" title="@T("readings.actions.edit", "Modifica")">
+            var dayPart = GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions());
+            var systolicSeverity = ClassifyValue(reading.Systolic, Thresholds.Systolic);
+            var diastolicSeverity = ClassifyValue(reading.Diastolic, Thresholds.Diastolic);
+            <article class="reading-mobile-card">
+                <div class="reading-mobile-grid">
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.date", "Data")</div>
+                        <div class="reading-mobile-value">@FormatCetDate(reading.TimestampUtc)</div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.time", "Ora")</div>
+                        <div class="reading-mobile-value">@FormatCetTime(reading.TimestampUtc)</div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.timeslot", "Fascia")</div>
+                        <div class="reading-mobile-value d-inline-flex align-items-center gap-2">
+                            @GetDayPartIcon(dayPart)
+                            <span>@GetTimeSlotLabel(reading)</span>
+                        </div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.systolic", "Sistolica")</div>
+                        <div class="reading-mobile-value">@reading.Systolic</div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.diastolic", "Diastolica")</div>
+                        <div class="reading-mobile-value">@reading.Diastolic</div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.heartRate", "FC")</div>
+                        <div class="reading-mobile-value">@reading.HeartRate</div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.weight", "Peso")</div>
+                        <div class="reading-mobile-value">@reading.WeightKg</div>
+                    </div>
+                    <div class="reading-mobile-field">
+                        <div class="reading-mobile-label">@T("readings.table.severity", "Severita")</div>
+                        <div class="reading-mobile-value">
+                            <span class="badge me-2 @GetSeverityClass(systolicSeverity)">
+                                S: @GetSeverityLabel(systolicSeverity)
+                            </span>
+                            <span class="badge @GetSeverityClass(diastolicSeverity)">
+                                D: @GetSeverityLabel(diastolicSeverity)
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="reading-mobile-actions">
+                    <button class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1" @onclick="() => Edit(reading.Id)" aria-label="@T("readings.actions.editAria", "Modifica rilevazione")" title="@T("readings.actions.edit", "Modifica")">
                         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                             <path fill="currentColor" d="M3 17.25V21h3.75L17.8 9.94l-3.75-3.75L3 17.25Zm2.92 2.33H5v-.92l9.06-9.06.92.92L5.92 19.58ZM20.71 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.5 1.5 3.75 3.75 1.5-1.51Z"/>
                         </svg>
                         <span>@T("readings.actions.edit", "Modifica")</span>
                     </button>
-                    <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" @onclick="() => RequestDelete(reading)" aria-label="@T("readings.actions.deleteAria", "Elimina rilevazione")" title="@T("readings.actions.delete", "Elimina")">
+                    <button class="btn btn-sm btn-outline-danger d-inline-flex align-items-center justify-content-center gap-1" @onclick="() => RequestDelete(reading)" aria-label="@T("readings.actions.deleteAria", "Elimina rilevazione")" title="@T("readings.actions.delete", "Elimina")">
                         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
                             <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2v9H7V9Zm-1 12h12a2 2 0 0 0 2-2V8H4v11a2 2 0 0 0 2 2Z"/>
                         </svg>
                         <span>@T("readings.actions.delete", "Elimina")</span>
                     </button>
-                </td>
-            </tr>
+                </div>
+            </article>
         }
-        </tbody>
-    </table>
+    </div>
 }
 
 <div class="modal fade" id="deleteReadingModal" tabindex="-1" aria-labelledby="deleteReadingModalLabel" aria-hidden="true">
