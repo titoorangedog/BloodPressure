@@ -1,0 +1,944 @@
+:root,
+[data-bs-theme="light"] {
+    color-scheme: light;
+    --md-sys-color-primary: #006a6a;
+    --md-sys-color-on-primary: #ffffff;
+    --md-sys-color-primary-container: #6ff7f5;
+    --md-sys-color-on-primary-container: #002020;
+    --md-sys-color-secondary: #4a6363;
+    --md-sys-color-on-secondary: #ffffff;
+    --md-sys-color-secondary-container: #cce8e7;
+    --md-sys-color-on-secondary-container: #051f20;
+    --md-sys-color-tertiary: #4f5f7d;
+    --md-sys-color-surface: #f5fbfa;
+    --md-sys-color-surface-container: #e8efee;
+    --md-sys-color-surface-container-high: #dfe6e5;
+    --md-sys-color-on-surface: #161d1d;
+    --md-sys-color-outline: #6f7979;
+    --md-sys-color-error: #ba1a1a;
+    --md-sys-color-warning: #8b5000;
+    --md-sys-color-success: #1b6f3a;
+    --md-state-hover: rgba(0, 0, 0, 0.04);
+    --md-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.16), 0 1px 3px rgba(0, 0, 0, 0.08);
+    --md-shadow-2: 0 4px 12px rgba(0, 0, 0, 0.16);
+
+    /* Bootstrap-compatible aliases used by app styles and pages */
+    --bs-body-bg: var(--md-sys-color-surface);
+    --bs-body-color: var(--md-sys-color-on-surface);
+    --bs-border-color: #c0c9c8;
+    --bs-secondary-color: #586262;
+}
+
+[data-bs-theme="dark"] {
+    color-scheme: dark;
+    --md-sys-color-primary: #4ddad8;
+    --md-sys-color-on-primary: #003737;
+    --md-sys-color-primary-container: #005050;
+    --md-sys-color-on-primary-container: #6ff7f5;
+    --md-sys-color-secondary: #b0cccb;
+    --md-sys-color-on-secondary: #1b3535;
+    --md-sys-color-secondary-container: #324b4b;
+    --md-sys-color-on-secondary-container: #cce8e7;
+    --md-sys-color-tertiary: #b7c7ea;
+    --md-sys-color-surface: #0f1515;
+    --md-sys-color-surface-container: #1a2121;
+    --md-sys-color-surface-container-high: #232b2b;
+    --md-sys-color-on-surface: #dde4e3;
+    --md-sys-color-outline: #899393;
+    --md-sys-color-error: #ffb4ab;
+    --md-sys-color-warning: #ffb870;
+    --md-sys-color-success: #9ad7ab;
+    --md-state-hover: rgba(255, 255, 255, 0.08);
+    --md-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.45), 0 2px 10px rgba(0, 0, 0, 0.3);
+    --md-shadow-2: 0 6px 18px rgba(0, 0, 0, 0.45);
+
+    --bs-body-bg: var(--md-sys-color-surface);
+    --bs-body-color: var(--md-sys-color-on-surface);
+    --bs-border-color: #3b4545;
+    --bs-secondary-color: #a7b3b2;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+    line-height: 1.45;
+}
+
+a {
+    color: var(--md-sys-color-primary);
+}
+
+a:hover {
+    color: var(--md-sys-color-on-primary-container);
+}
+
+/* Layout */
+.container-fluid {
+    width: 100%;
+    padding-right: 1rem;
+    padding-left: 1rem;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.col-12 {
+    width: 100%;
+}
+
+@media (min-width: 768px) {
+    .col-md-4 {
+        width: 33.333333%;
+    }
+
+    .d-md-none {
+        display: none !important;
+    }
+
+    .d-md-block {
+        display: block !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .d-md-block {
+        display: none !important;
+    }
+
+    .d-md-none {
+        display: block !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .col-lg-3 {
+        width: 25%;
+    }
+
+    .col-lg-6 {
+        width: 50%;
+    }
+}
+
+/* Spacing utilities */
+.mb-0 { margin-bottom: 0 !important; }
+.mb-2 { margin-bottom: 0.5rem !important; }
+.mb-3 { margin-bottom: 1rem !important; }
+.mb-4 { margin-bottom: 1.5rem !important; }
+.mt-2 { margin-top: 0.5rem !important; }
+.mt-3 { margin-top: 1rem !important; }
+.mt-4 { margin-top: 1.5rem !important; }
+.me-2 { margin-right: 0.5rem !important; }
+.ms-1 { margin-left: 0.25rem !important; }
+.ms-2 { margin-left: 0.5rem !important; }
+.p-3 { padding: 1rem !important; }
+.p-4 { padding: 1.5rem !important; }
+.px-3 { padding-left: 1rem !important; padding-right: 1rem !important; }
+.px-4 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+.ps-3 { padding-left: 1rem !important; }
+
+.g-2 { gap: 0.5rem !important; }
+.g-3 { gap: 1rem !important; }
+.gap-1 { gap: 0.25rem !important; }
+.gap-2 { gap: 0.5rem !important; }
+
+/* Flex/display utilities */
+.d-flex { display: flex !important; }
+.d-inline-flex { display: inline-flex !important; }
+.d-none { display: none !important; }
+.flex-column { flex-direction: column !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.align-items-center { align-items: center !important; }
+.align-items-end { align-items: flex-end !important; }
+.align-middle { vertical-align: middle !important; }
+.justify-content-center { justify-content: center !important; }
+.justify-content-between { justify-content: space-between !important; }
+.position-relative { position: relative !important; }
+.w-100 { width: 100% !important; }
+.h-100 { height: 100% !important; }
+.lh-1 { line-height: 1 !important; }
+.small { font-size: 0.85rem !important; }
+.text-end { text-align: right !important; }
+.text-muted { color: var(--bs-secondary-color) !important; }
+.text-dark { color: #1f2328 !important; }
+.text-white { color: #ffffff !important; }
+.text-danger { color: var(--md-sys-color-error) !important; }
+
+/* Period filter layout */
+.bp-period-filter-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+}
+
+.bp-period-filter-field {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+.bp-period-filter-action {
+    flex: 0 0 8rem;
+}
+
+/* Components */
+.card {
+    border-radius: 1rem;
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--bs-border-color);
+    box-shadow: var(--md-shadow-1);
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+.card-title {
+    margin-top: 0;
+    margin-bottom: 0.75rem;
+}
+
+.card-text {
+    margin-top: 0;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    color: inherit;
+}
+
+.table th,
+.table td {
+    border-bottom: 1px solid var(--bs-border-color);
+    padding: 0.625rem 0.75rem;
+}
+
+.table thead th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--bs-secondary-color);
+}
+
+.table-striped tbody tr:nth-child(odd) {
+    background: color-mix(in oklab, var(--md-sys-color-surface-container-high) 70%, transparent);
+}
+
+.table-sm th,
+.table-sm td {
+    padding: 0.45rem 0.6rem;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.form-label {
+    display: inline-block;
+    margin-bottom: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.form-text {
+    margin-top: 0.35rem;
+    font-size: 0.82rem;
+    color: var(--bs-secondary-color);
+}
+
+.form-control,
+.form-select {
+    width: 100%;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.8rem;
+    padding: 0.58rem 0.75rem;
+    background: var(--md-sys-color-surface);
+    color: var(--md-sys-color-on-surface);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.bp-datepicker,
+.bp-timepicker {
+    min-height: 2.35rem;
+    appearance: auto;
+    -webkit-appearance: auto;
+    padding-right: 2.2rem;
+}
+
+.bp-timepicker {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%236f7979' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.75A10.25 10.25 0 1 1 1.75 12 10.26 10.26 0 0 1 12 1.75Zm0 2A8.25 8.25 0 1 0 20.25 12 8.26 8.26 0 0 0 12 3.75Zm1 3.5v4.35l3.15 1.89-1 1.72L11 12.65V7.25h2Z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: calc(100% - 0.7rem) center;
+    background-size: 1rem;
+}
+
+.bp-datepicker::-webkit-calendar-picker-indicator,
+.bp-timepicker::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    cursor: pointer;
+}
+
+[data-bs-theme="light"] .bp-datepicker,
+[data-bs-theme="light"] .bp-timepicker {
+    color-scheme: light;
+}
+
+[data-bs-theme="dark"] .bp-datepicker,
+[data-bs-theme="dark"] .bp-timepicker {
+    color-scheme: dark;
+}
+
+[data-bs-theme="dark"] .bp-timepicker {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23899393' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.75A10.25 10.25 0 1 1 1.75 12 10.26 10.26 0 0 1 12 1.75Zm0 2A8.25 8.25 0 1 0 20.25 12 8.26 8.26 0 0 0 12 3.75Zm1 3.5v4.35l3.15 1.89-1 1.72L11 12.65V7.25h2Z'/%3E%3C/svg%3E");
+}
+
+[data-bs-theme="dark"] .bp-datepicker::-webkit-calendar-picker-indicator,
+[data-bs-theme="dark"] .bp-timepicker::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+}
+
+.bp-timepicker::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.form-control:focus,
+.form-select:focus {
+    outline: none;
+    border-color: var(--md-sys-color-primary);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--md-sys-color-primary) 22%, transparent);
+}
+
+.form-control-sm,
+.form-select-sm {
+    padding: 0.4rem 0.55rem;
+    border-radius: 0.65rem;
+}
+
+.form-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%236f7979' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
+    background-position: calc(100% - 0.7rem) center;
+    background-size: 1rem;
+    background-repeat: no-repeat;
+    padding-right: 2.2rem;
+}
+
+.form-select::-ms-expand {
+    display: none;
+}
+
+[data-bs-theme="dark"] .form-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23899393' viewBox='0 0 24 24'%3E%3Cpath d='M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41Z'/%3E%3C/svg%3E");
+}
+
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+}
+
+.form-check-input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--md-sys-color-primary);
+}
+
+.form-check-label {
+    font-size: 0.95rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    padding: 0.54rem 1rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.btn-sm {
+    padding: 0.42rem 0.8rem;
+    font-size: 0.86rem;
+}
+
+.btn-primary {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+    box-shadow: var(--md-shadow-1);
+    background: color-mix(in oklab, var(--md-sys-color-primary) 88%, black);
+}
+
+.btn-secondary {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+}
+
+.btn-danger {
+    background: var(--md-sys-color-error);
+    color: #ffffff;
+}
+
+.btn-success {
+    background: var(--md-sys-color-success);
+    color: #ffffff;
+}
+
+.btn-outline-primary,
+.btn-outline-secondary,
+.btn-outline-success,
+.btn-outline-danger,
+.btn-outline-info,
+.btn-outline-light,
+.btn-outline-dark {
+    background: transparent;
+}
+
+.btn-outline-primary {
+    color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
+}
+
+.btn-outline-secondary {
+    color: var(--md-sys-color-secondary);
+    border-color: var(--bs-border-color);
+}
+
+.btn-outline-success {
+    color: var(--md-sys-color-success);
+    border-color: var(--md-sys-color-success);
+}
+
+.btn-outline-danger {
+    color: var(--md-sys-color-error);
+    border-color: var(--md-sys-color-error);
+}
+
+.btn-outline-info {
+    color: var(--md-sys-color-tertiary);
+    border-color: var(--md-sys-color-tertiary);
+}
+
+.btn-outline-light {
+    color: #f8fbff;
+    border-color: rgba(248, 251, 255, 0.7);
+}
+
+.btn-outline-dark {
+    color: #162020;
+    border-color: rgba(22, 32, 32, 0.5);
+}
+
+.btn-outline-primary:hover:not(:disabled),
+.btn-outline-secondary:hover:not(:disabled),
+.btn-outline-success:hover:not(:disabled),
+.btn-outline-danger:hover:not(:disabled),
+.btn-outline-info:hover:not(:disabled),
+.btn-outline-light:hover:not(:disabled),
+.btn-outline-dark:hover:not(:disabled) {
+    background: var(--md-state-hover);
+}
+
+.alert {
+    border-radius: 0.9rem;
+    padding: 0.8rem 0.95rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+}
+
+.alert-info {
+    color: #00344f;
+    background: #d9f1ff;
+    border-color: #9dd8f8;
+}
+
+.alert-danger {
+    color: #5f0000;
+    background: #ffd9d9;
+    border-color: #f8abab;
+}
+
+.alert-warning {
+    color: #563100;
+    background: #ffebcf;
+    border-color: #f9cf98;
+}
+
+.alert-success {
+    color: #003918;
+    background: #d9f7dd;
+    border-color: #95deb4;
+}
+
+.alert-secondary {
+    color: #293132;
+    background: #e8efee;
+    border-color: #ced8d7;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.28rem 0.55rem;
+    border: 1px solid transparent;
+}
+
+.bg-primary { background: #165fb7 !important; color: #ffffff !important; }
+.bg-danger { background: #c53131 !important; color: #ffffff !important; }
+.bg-warning { background: #f3bc53 !important; color: #2b2108 !important; }
+.bg-secondary { background: #5d6868 !important; color: #ffffff !important; }
+
+.border { border: 1px solid var(--bs-border-color) !important; }
+.border-danger { border-color: var(--md-sys-color-error) !important; }
+.rounded { border-radius: 0.8rem !important; }
+.shadow-sm { box-shadow: var(--md-shadow-1) !important; }
+
+/* Navbar */
+.navbar {
+    width: 100%;
+}
+
+.navbar-brand {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+.navbar-toggler {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.65rem;
+    background: transparent;
+    cursor: pointer;
+}
+
+.navbar-toggler-icon {
+    width: 1rem;
+    height: 0.75rem;
+    display: inline-block;
+    background:
+        linear-gradient(currentColor, currentColor) center 0/100% 2px no-repeat,
+        linear-gradient(currentColor, currentColor) center 50%/100% 2px no-repeat,
+        linear-gradient(currentColor, currentColor) center 100%/100% 2px no-repeat;
+}
+
+.collapse {
+    display: none;
+}
+
+/* Nav links */
+.nav {
+    display: flex;
+}
+
+.nav-link {
+    display: block;
+    text-decoration: none;
+}
+
+/* Modal (Bootstrap-like class contract, custom implementation) */
+body.modal-open {
+    overflow: hidden;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2050;
+    overflow: auto;
+    padding: 1rem;
+}
+
+.modal.show {
+    display: block;
+}
+
+.modal-dialog {
+    max-width: 520px;
+    margin: 8vh auto;
+}
+
+.modal-content {
+    border-radius: 1rem;
+    border: 1px solid var(--bs-border-color);
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    box-shadow: var(--md-shadow-2);
+}
+
+.modal-header,
+.modal-body,
+.modal-footer {
+    padding: 0.95rem 1rem;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.42);
+    z-index: 2040;
+}
+
+.fade {
+    transition: opacity 0.15s ease;
+}
+
+.btn-close {
+    width: 1.9rem;
+    height: 1.9rem;
+    border: 0;
+    border-radius: 999px;
+    background:
+        linear-gradient(45deg, transparent 46%, currentColor 46%, currentColor 54%, transparent 54%),
+        linear-gradient(-45deg, transparent 46%, currentColor 46%, currentColor 54%, transparent 54%);
+    color: inherit;
+    cursor: pointer;
+}
+
+/* Spinner */
+.spinner-border {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: md3-spin 0.7s linear infinite;
+}
+
+.spinner-border-sm {
+    width: 0.85rem;
+    height: 0.85rem;
+}
+
+@keyframes md3-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Flatpickr Material adjustments */
+.flatpickr-calendar {
+    z-index: 4000 !important;
+    border-radius: 12px !important;
+    box-shadow: var(--md-shadow-2) !important;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected.inRange,
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange {
+    background: var(--md-sys-color-primary) !important;
+    border-color: var(--md-sys-color-primary) !important;
+    color: var(--md-sys-color-on-primary) !important;
+}
+
+[data-bs-theme="dark"] .flatpickr-calendar {
+    background: var(--md-sys-color-surface-container-high) !important;
+    border-color: var(--bs-border-color) !important;
+}
+
+/* Material 3 custom time picker dialog */
+.bp-timepicker-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(18, 24, 24, 0.28);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 4100;
+    padding: 1rem;
+}
+
+.bp-timepicker-overlay.open {
+    display: flex;
+}
+
+.bp-timepicker-dialog {
+    width: min(92vw, 520px);
+    border-radius: 28px;
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    padding: 1.4rem 1.4rem 1rem;
+    box-shadow: var(--md-shadow-2);
+    border: 1px solid var(--bs-border-color);
+}
+
+.bp-timepicker-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 0.9rem;
+}
+
+.bp-timepicker-header {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.bp-timepicker-chip {
+    border: 1px solid transparent;
+    border-radius: 14px;
+    min-width: 92px;
+    font-size: 3rem;
+    line-height: 1;
+    padding: 0.8rem 0.6rem;
+    background: var(--md-sys-color-surface-container-high);
+    color: inherit;
+    cursor: pointer;
+}
+
+.bp-timepicker-chip.active {
+    background: color-mix(in oklab, var(--md-sys-color-primary) 35%, var(--md-sys-color-surface-container-high));
+    color: var(--md-sys-color-on-primary-container);
+}
+
+.bp-timepicker-separator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    padding: 0 0.15rem;
+}
+
+.bp-timepicker-meridiem {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-left: auto;
+}
+
+.bp-timepicker-meridiem-btn {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    min-width: 62px;
+    padding: 0.55rem 0.7rem;
+    font-size: 1.6rem;
+    line-height: 1.1;
+    cursor: pointer;
+}
+
+.bp-timepicker-meridiem-btn + .bp-timepicker-meridiem-btn {
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.bp-timepicker-meridiem-btn.active {
+    background: color-mix(in oklab, var(--md-sys-color-primary) 35%, var(--md-sys-color-surface-container-high));
+}
+
+.bp-timepicker-dial-container {
+    padding: 0.3rem 0 0.7rem;
+}
+
+.bp-timepicker-dial {
+    position: relative;
+    margin: 0 auto;
+    width: 248px;
+    height: 248px;
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--md-sys-color-surface-container-high) 82%, var(--md-sys-color-surface));
+}
+
+.bp-timepicker-number {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 1.12rem;
+    cursor: pointer;
+}
+
+.bp-timepicker-number.active {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+
+.bp-timepicker-center {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.bp-timepicker-hand {
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    width: 2px;
+    height: 78px;
+    transform-origin: bottom center;
+    background: color-mix(in oklab, var(--md-sys-color-primary) 85%, transparent);
+    z-index: 1;
+}
+
+.bp-timepicker-hand::after {
+    content: "";
+    position: absolute;
+    top: -7px;
+    left: 50%;
+    width: 14px;
+    height: 14px;
+    transform: translateX(-50%);
+    border-radius: 50%;
+    background: var(--md-sys-color-primary);
+}
+
+.bp-timepicker-input-container {
+    display: none;
+    padding: 0.3rem 0 0.7rem;
+}
+
+.bp-timepicker-input-grid {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.bp-timepicker-input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.bp-timepicker-number {
+    appearance: textfield;
+}
+
+.bp-timepicker-input-wrap .bp-timepicker-number {
+    position: static;
+    transform: none;
+    width: 112px;
+    height: auto;
+    border-radius: 14px;
+    border: 1px solid var(--bs-border-color);
+    background: var(--md-sys-color-surface-container-high);
+    font-size: 2.4rem;
+    line-height: 1.1;
+    padding: 0.55rem 0.5rem;
+    text-align: center;
+}
+
+.bp-timepicker-input-label {
+    font-size: 0.95rem;
+    color: var(--bs-secondary-color);
+    padding-left: 0.2rem;
+}
+
+.bp-timepicker-separator-input {
+    font-size: 3rem;
+    padding-top: 0.2rem;
+}
+
+.bp-timepicker-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.8rem;
+}
+
+.bp-timepicker-icon-btn {
+    border: 0;
+    background: transparent;
+    color: var(--bs-secondary-color);
+    font-size: 1.4rem;
+    width: 2rem;
+    height: 2rem;
+    cursor: pointer;
+}
+
+.bp-timepicker-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.bp-timepicker-action {
+    border: 0;
+    background: transparent;
+    color: var(--md-sys-color-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.5rem 0.8rem;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.bp-timepicker-action:hover,
+.bp-timepicker-icon-btn:hover {
+    background: var(--md-state-hover);
+}

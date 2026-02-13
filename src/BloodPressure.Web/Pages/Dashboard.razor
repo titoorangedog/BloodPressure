@@ -29,16 +29,16 @@ else
         <div class="card mb-3">
             <div class="card-body">
                 <h5 class="card-title">@T("readings.filter.title", "Filtro periodo")</h5>
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-4">
+                <div class="bp-period-filter-row">
+                    <div class="bp-period-filter-field">
                         <label class="form-label">@T("dashboard.filter.from", "Data inizio")</label>
                         <InputDate class="form-control bp-datepicker" @bind-Value="FilterFromDate" disabled="@IsApplyingFilter" />
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="bp-period-filter-field">
                         <label class="form-label">@T("dashboard.filter.to", "Data fine")</label>
                         <InputDate class="form-control bp-datepicker" @bind-Value="FilterToDate" disabled="@IsApplyingFilter" />
                     </div>
-                    <div class="col-12 col-md-4">
+                    <div class="bp-period-filter-action">
                         <button class="btn btn-primary w-100" @onclick="ApplyDateFilterAsync" disabled="@IsApplyingFilter">
                             @if (IsApplyingFilter)
                             {

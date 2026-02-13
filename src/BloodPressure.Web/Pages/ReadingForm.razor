@@ -4,15 +4,33 @@
 @using BloodPressure.Shared.Domain
 @using System.Globalization
 @using System.ComponentModel.DataAnnotations
+@using System.Text
 @inject BloodPressure.Web.Services.ReadApiClient ReadApiClient
 @inject BloodPressure.Web.Services.WriteApiClient WriteApiClient
 @inject BloodPressure.Web.Services.ToastService ToastService
 @inject BloodPressure.Web.Services.LocalizationService LocalizationService
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
 @implements IDisposable
 
 <h1>@(IsEdit ? T("readingForm.title.edit", "Modifica rilevazione") : T("readingForm.title.new", "Nuova rilevazione"))</h1>
+
+<style>
+    .reading-form-grid-4 {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0.75rem 1rem;
+    }
+
+    .reading-form-field {
+        min-width: 0;
+    }
+
+    @@media (min-width: 992px) {
+        .reading-form-grid-4 {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+    }
+</style>
 
 @if (IsLoading)
 {
@@ -24,76 +42,63 @@ else
         <DataAnnotationsValidator />
         <ValidationSummary />
 
+        <div class="reading-form-grid-4 mb-3">
+            <div class="reading-form-field">
+                <label class="form-label">@T("readingForm.dateLocal", "Data (locale)")</label>
+                <InputDate class="form-control bp-datepicker" @bind-Value="Model.DateLocal" @onchange="OnDateOrTimeChanged" />
+            </div>
+            <div class="reading-form-field">
+                <label class="form-label">@T("readingForm.timeLocal", "Ora (locale)")</label>
+                <input class="form-control bp-timepicker"
+                       type="text"
+                       inputmode="numeric"
+                       placeholder="HH:mm"
+                       value="@Model.TimeLocalText"
+                       @oninput="OnTimeInputChanged"
+                       @onchange="OnDateOrTimeChanged" />
+                <div class="form-text">@T("readingForm.timeHelp", "Formato 24 ore (HH:mm).")</div>
+            </div>
+            <div class="reading-form-field">
+                <label class="form-label">@T("readings.table.systolic", "Sistolica")</label>
+                <InputNumber class="form-control" @bind-Value="Model.Systolic" />
+            </div>
+            <div class="reading-form-field">
+                <label class="form-label">@T("readings.table.diastolic", "Diastolica")</label>
+                <InputNumber class="form-control" @bind-Value="Model.Diastolic" />
+            </div>
+        </div>
+
+        <div class="reading-form-grid-4 mb-3">
+            <div class="reading-form-field">
+                <label class="form-label">@T("readingForm.weight", "Peso (kg)")</label>
+                <InputNumber class="form-control" @bind-Value="Model.WeightKg" />
+            </div>
+            <div class="reading-form-field">
+                <label class="form-label">@T("readingForm.heartRate", "Heart rate")</label>
+                <InputNumber class="form-control" @bind-Value="Model.HeartRate" />
+            </div>
+            <div class="reading-form-field">
+                <label class="form-label">@T("readingForm.position", "Posizione")</label>
+                <InputSelect class="form-select" @bind-Value="Model.Position">
+                    @foreach (var value in Enum.GetValues<Position>())
+                    {
+                        <option value="@value">@GetPositionLabel(value)</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="reading-form-field">
+                <label class="form-label">@T("readingForm.sportActivity", "Attivita sportiva")</label>
+                <InputSelect class="form-select" @bind-Value="Model.SportActivityOptionId">
+                    <option value="">@T("readingForm.notSelected", "(non selezionato)")</option>
+                    @foreach (var option in Options.SportActivityOptions)
+                    {
+                        <option value="@option.Id">@GetSportActivityLabel(option)</option>
+                    }
+                </InputSelect>
+            </div>
+        </div>
+
         <div class="row g-3">
-            <div class="col-12 col-lg-3">
-                <div class="mb-3">
-                    <label class="form-label">@T("readingForm.dateLocal", "Data (locale)")</label>
-                    <InputDate class="form-control bp-datepicker" @bind-Value="Model.DateLocal" @onchange="OnDateOrTimeChanged" />
-                </div>
-            </div>
-            <div class="col-12 col-lg-3">
-                <div class="mb-3">
-                    <label class="form-label">@T("readingForm.timeLocal", "Ora (locale)")</label>
-                    <input class="form-control bp-timepicker"
-                           type="text"
-                           inputmode="numeric"
-                           placeholder="HH:mm"
-                           @bind-value="Model.TimeLocalText"
-                           @bind-value:event="oninput"
-                           @onchange="OnDateOrTimeChanged" />
-                    <div class="form-text">@T("readingForm.timeHelp", "Formato 24 ore (HH:mm).")</div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-3">
-                <div class="mb-3">
-                    <label class="form-label">@T("readings.table.systolic", "Sistolica")</label>
-                    <InputNumber class="form-control" @bind-Value="Model.Systolic" />
-                </div>
-            </div>
-            <div class="col-12 col-lg-3">
-                <div class="mb-3">
-                    <label class="form-label">@T("readings.table.diastolic", "Diastolica")</label>
-                    <InputNumber class="form-control" @bind-Value="Model.Diastolic" />
-                </div>
-            </div>
-
-            <div class="col-12 col-lg-6">
-                <div class="mb-3">
-                    <label class="form-label">@T("readingForm.weight", "Peso (kg)")</label>
-                    <InputNumber class="form-control" @bind-Value="Model.WeightKg" />
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="mb-3">
-                    <label class="form-label">@T("readingForm.heartRate", "Heart rate")</label>
-                    <InputNumber class="form-control" @bind-Value="Model.HeartRate" />
-                </div>
-            </div>
-
-            <div class="col-12 col-lg-6">
-                <div class="mb-3">
-                    <label class="form-label">@T("readingForm.position", "Posizione")</label>
-                    <InputSelect class="form-select" @bind-Value="Model.Position">
-                        @foreach (var value in Enum.GetValues<Position>())
-                        {
-                            <option value="@value">@value</option>
-                        }
-                    </InputSelect>
-                </div>
-            </div>
-            <div class="col-12 col-lg-6">
-                <div class="mb-3">
-                    <label class="form-label">@T("readingForm.sportActivity", "Attivita sportiva")</label>
-                    <InputSelect class="form-select" @bind-Value="Model.SportActivityOptionId">
-                        <option value="">@T("readingForm.notSelected", "(non selezionato)")</option>
-                        @foreach (var option in Options.SportActivityOptions)
-                        {
-                            <option value="@option.Id">@option.Name</option>
-                        }
-                    </InputSelect>
-                </div>
-            </div>
-
             <div class="col-12 col-lg-6">
                 <div class="mb-3">
                     <label class="form-label">@T("readingForm.medicationSkipped", "Farmaco saltato")</label>
@@ -108,7 +113,7 @@ else
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" checked="@Model.SymptomOptionIds.Contains(option.Id)"
                                    @onchange="e => ToggleSymptom(option.Id, (bool)e.Value!)" />
-                            <label class="form-check-label">@option.Name</label>
+                            <label class="form-check-label">@GetSymptomLabel(option)</label>
                         </div>
                     }
                 </div>
@@ -153,6 +158,7 @@ else
     private LicenseType? ActiveLicenseType { get; set; }
     private ReadingFormModel Model { get; set; } = new();
     private bool isLocalizationSubscribed;
+    private const int NoneSportActivityOptionId = 1;
 
     protected override async Task OnInitializedAsync()
     {
@@ -185,14 +191,6 @@ else
         EnsureDefaultSportActivity();
         UpdateTimeSlotFromTime(!IsEdit);
         IsLoading = false;
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await JS.InvokeVoidAsync("bpPickers.init");
-        }
     }
 
     private async Task HandleSubmit()
@@ -267,6 +265,11 @@ else
         UpdateTimeSlotFromTime(false);
     }
 
+    private void OnTimeInputChanged(ChangeEventArgs args)
+    {
+        Model.TimeLocalText = args.Value?.ToString() ?? string.Empty;
+    }
+
     private void NormalizeTimeText()
     {
         if (TryParseTimeText(Model.TimeLocalText, out _, out var normalized))
@@ -294,7 +297,9 @@ else
         }
 
         var noneOption = Options.SportActivityOptions
-            .FirstOrDefault(option => string.Equals(option.Name, "None", StringComparison.OrdinalIgnoreCase));
+            .FirstOrDefault(option =>
+                option.Id == NoneSportActivityOptionId ||
+                string.Equals(option.Name, "None", StringComparison.OrdinalIgnoreCase));
 
         if (noneOption is not null)
         {
@@ -493,6 +498,97 @@ else
     }
 
     private string T(string key, string fallback) => LocalizationService.T(key, fallback);
+
+    private string GetPositionLabel(Position value) => value switch
+    {
+        Position.Supine => T("readingForm.position.supine", "Supine"),
+        Position.Sitting => T("readingForm.position.sitting", "Sitting"),
+        Position.Standing => T("readingForm.position.standing", "Standing"),
+        Position.Other => T("readingForm.position.other", "Other"),
+        _ => value.ToString()
+    };
+
+    private string GetSportActivityLabel(OptionItemDto option)
+    {
+        var key = option.Id switch
+        {
+            1 => "readingForm.sportActivity.none",
+            2 => "readingForm.sportActivity.light",
+            3 => "readingForm.sportActivity.moderate",
+            4 => "readingForm.sportActivity.intense",
+            _ => GetSportActivityKeyByName(option.Name)
+        };
+
+        return key is null ? option.Name : T(key, option.Name);
+    }
+
+    private string? GetSportActivityKeyByName(string? optionName)
+    {
+        var normalized = NormalizeLookupKey(optionName);
+        return normalized switch
+        {
+            "none" or "nessuna" or "ninguna" or "keine" or "aucune" or "wu" => "readingForm.sportActivity.none",
+            "light" or "leggera" or "ligera" or "leicht" or "legere" => "readingForm.sportActivity.light",
+            "moderate" or "moderata" or "moderado" or "massig" or "moderee" => "readingForm.sportActivity.moderate",
+            "intense" or "intensa" or "intenso" or "intensiv" => "readingForm.sportActivity.intense",
+            _ => null
+        };
+    }
+
+    private string GetSymptomLabel(OptionItemDto option)
+    {
+        var key = option.Id switch
+        {
+            1 => "readingForm.symptom.headache",
+            2 => "readingForm.symptom.dizziness",
+            3 => "readingForm.symptom.nausea",
+            4 => "readingForm.symptom.chestPain",
+            5 => "readingForm.symptom.blurredVision",
+            _ => GetSymptomKeyByName(option.Name)
+        };
+
+        return key is null ? option.Name : T(key, option.Name);
+    }
+
+    private string? GetSymptomKeyByName(string? optionName)
+    {
+        var normalized = NormalizeLookupKey(optionName);
+        return normalized switch
+        {
+            "headache" or "malditesta" or "dolordecabeza" or "kopfschmerzen" or "maldetete" => "readingForm.symptom.headache",
+            "dizziness" or "capogiro" or "capogiri" or "mareo" or "schwindel" or "etourdissement" => "readingForm.symptom.dizziness",
+            "nausea" or "nausee" => "readingForm.symptom.nausea",
+            "chestpain" or "doloretoracico" or "dolordetorax" or "brustschmerzen" or "douleurthoracique" => "readingForm.symptom.chestPain",
+            "blurredvision" or "vistaannebbiata" or "visionborrosa" or "verschwommensehen" or "visionfloue" => "readingForm.symptom.blurredVision",
+            _ => null
+        };
+    }
+
+    private static string NormalizeLookupKey(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        var normalized = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(normalized.Length);
+        foreach (var ch in normalized)
+        {
+            var category = CharUnicodeInfo.GetUnicodeCategory(ch);
+            if (category == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(ch))
+            {
+                builder.Append(ch);
+            }
+        }
+
+        return builder.ToString();
+    }
 
     private sealed class ReadingFormModel
     {
