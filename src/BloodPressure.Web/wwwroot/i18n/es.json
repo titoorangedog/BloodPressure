@@ -36,6 +36,7 @@
   "readings.filter.from": "Fecha de inicio",
   "readings.filter.to": "Fecha de fin",
   "readings.filter.apply": "Filtrar",
+  "readings.filter.noResultsInRange": "No se encontraron registros en el período seleccionado.",
   "readings.empty": "No se encontraron mediciones.",
   "readings.import.failed": "Importación fallida.",
   "readings.export.closePanel": "Cerrar panel de exportación",

@@ -36,6 +36,7 @@
   "readings.filter.from": "开始日期",
   "readings.filter.to": "结束日期",
   "readings.filter.apply": "筛选",
+  "readings.filter.noResultsInRange": "所选时间范围内未找到记录。",
   "readings.empty": "未找到测量记录。",
   "readings.import.failed": "导入失败。",
   "readings.export.closePanel": "关闭导出面板",
