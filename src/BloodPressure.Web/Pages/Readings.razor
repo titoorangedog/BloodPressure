@@ -36,11 +36,12 @@
         padding: 0.75rem;
         margin-bottom: 0.75rem;
         background: var(--bs-body-bg);
+        overflow-x: hidden;
     }
 
     .reading-mobile-grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
         gap: 0.5rem 0.75rem;
     }
 
@@ -68,6 +69,45 @@
 
     .reading-mobile-actions .btn {
         flex: 1 1 auto;
+    }
+
+    .reading-mobile-severity {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-items: start;
+        gap: 0.35rem;
+    }
+
+    .reading-mobile-severity .badge {
+        margin-right: 0 !important;
+        max-width: 100%;
+        width: fit-content;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .reading-mobile-field-severity {
+        grid-column: 1 / -1;
+    }
+
+    @@media (max-width: 767.98px) {
+        .bp-period-filter-row {
+            display: grid !important;
+            grid-template-columns: 1fr;
+            align-items: stretch;
+        }
+
+        .bp-period-filter-field {
+            min-width: 0;
+        }
+
+        .bp-period-filter-action {
+            width: 100%;
+        }
+
+        .reading-mobile-actions {
+            flex-direction: column;
+        }
     }
 
 </style>
@@ -214,7 +254,9 @@ else if (ReadingItems.Count == 0)
 }
 else
 {
-    <div class="d-none d-md-block">
+    <div class="small text-muted mb-2">@T("readings.count", "Totale rilevazioni"): @ReadingItems.Count</div>
+
+    <div class="readings-desktop bp-readings-desktop">
         <table class="table table-striped">
             <thead>
             <tr>
@@ -253,14 +295,14 @@ else
                     <td>@reading.WeightKg</td>
                     <td>
                         @{
-                            var systolicSeverity = ClassifyValue(reading.Systolic, Thresholds.Systolic);
-                            var diastolicSeverity = ClassifyValue(reading.Diastolic, Thresholds.Diastolic);
+                            var systolicBand = ClassifySystolicBand(reading.Systolic);
+                            var diastolicBand = ClassifyDiastolicBand(reading.Diastolic);
                         }
-                        <span class="badge me-2 @GetSeverityClass(systolicSeverity)">
-                            S: @GetSeverityLabel(systolicSeverity)
+                        <span class="badge me-2 @GetClinicalBandClass(systolicBand)">
+                            S: @GetClinicalBandLabel(systolicBand)
                         </span>
-                        <span class="badge @GetSeverityClass(diastolicSeverity)">
-                            D: @GetSeverityLabel(diastolicSeverity)
+                        <span class="badge @GetClinicalBandClass(diastolicBand)">
+                            D: @GetClinicalBandLabel(diastolicBand)
                         </span>
                     </td>
                     <td>
@@ -283,12 +325,12 @@ else
         </table>
     </div>
 
-    <div class="d-md-none">
+    <div class="readings-mobile bp-readings-mobile">
         @foreach (var reading in ReadingItems)
         {
             var dayPart = GetDayPart(ToCet(reading.TimestampUtc).TimeOfDay, GetDefinitions());
-            var systolicSeverity = ClassifyValue(reading.Systolic, Thresholds.Systolic);
-            var diastolicSeverity = ClassifyValue(reading.Diastolic, Thresholds.Diastolic);
+            var systolicBand = ClassifySystolicBand(reading.Systolic);
+            var diastolicBand = ClassifyDiastolicBand(reading.Diastolic);
             <article class="reading-mobile-card">
                 <div class="reading-mobile-grid">
                     <div class="reading-mobile-field">
@@ -322,14 +364,14 @@ else
                         <div class="reading-mobile-label">@T("readings.table.weight", "Peso")</div>
                         <div class="reading-mobile-value">@reading.WeightKg</div>
                     </div>
-                    <div class="reading-mobile-field">
+                    <div class="reading-mobile-field reading-mobile-field-severity">
                         <div class="reading-mobile-label">@T("readings.table.severity", "Severita")</div>
-                        <div class="reading-mobile-value">
-                            <span class="badge me-2 @GetSeverityClass(systolicSeverity)">
-                                S: @GetSeverityLabel(systolicSeverity)
+                        <div class="reading-mobile-value reading-mobile-severity">
+                            <span class="badge me-2 @GetClinicalBandClass(systolicBand)">
+                                S: @GetClinicalBandLabel(systolicBand)
                             </span>
-                            <span class="badge @GetSeverityClass(diastolicSeverity)">
-                                D: @GetSeverityLabel(diastolicSeverity)
+                            <span class="badge @GetClinicalBandClass(diastolicBand)">
+                                D: @GetClinicalBandLabel(diastolicBand)
                             </span>
                         </div>
                     </div>
@@ -382,27 +424,33 @@ else
     private bool ShowExportPanel { get; set; }
     private bool ShowImportPanel { get; set; }
     private List<TimeSlotDefinitionDto> TimeSlotDefinitions { get; set; } = new();
-    private ClinicalThresholdsDto Thresholds { get; set; } = new()
+    private static readonly ThresholdSetDto DefaultSystolicThresholds = new()
     {
-        Systolic = new ThresholdSetDto
-        {
-            VeryLowMax = 79,
-            LowMax = 99,
-            NormalLowMax = 109,
-            NormalOptimalMax = 120,
-            WarningHighMax = 139,
-            VeryHighMin = 180
-        },
-        Diastolic = new ThresholdSetDto
-        {
-            VeryLowMax = 49,
-            LowMax = 59,
-            NormalLowMax = 69,
-            NormalOptimalMax = 80,
-            WarningHighMax = 89,
-            VeryHighMin = 120
-        }
+        VeryLowMax = 79,
+        LowMax = 99,
+        NormalLowMax = 109,
+        NormalOptimalMax = 120,
+        WarningHighMax = 139,
+        VeryHighMin = 180
     };
+
+    private static readonly ThresholdSetDto DefaultDiastolicThresholds = new()
+    {
+        VeryLowMax = 49,
+        LowMax = 59,
+        NormalLowMax = 69,
+        NormalOptimalMax = 80,
+        WarningHighMax = 89,
+        VeryHighMin = 120
+    };
+
+    private static readonly ClinicalThresholdsDto DefaultThresholds = new()
+    {
+        Systolic = DefaultSystolicThresholds,
+        Diastolic = DefaultDiastolicThresholds
+    };
+
+    private ClinicalThresholdsDto? Thresholds { get; set; } = DefaultThresholds;
     private string? InfoMessage { get; set; }
     private string? SuccessMessage { get; set; }
     private List<string> ErrorMessages { get; set; } = new();
@@ -431,26 +479,58 @@ else
         }
 
         var todayCet = DateOnly.FromDateTime(ToCet(DateTimeOffset.UtcNow).DateTime);
-        var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
-        ActiveLicenseType = license?.Type;
+        try
+        {
+            var license = await ReadApiClient.GetLicenseAsync(CancellationToken.None);
+            ActiveLicenseType = license?.Type;
+        }
+        catch
+        {
+            ActiveLicenseType = null;
+        }
 
         var minFromDate = ActiveLicenseType == LicenseType.Free ? todayCet.AddDays(-30) : todayCet.AddDays(-180);
         FilterFromDate = minFromDate;
         FilterToDate = todayCet;
 
-        var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
-        TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
-        Thresholds = settings.Thresholds;
+        try
+        {
+            var settings = await ReadApiClient.GetSettingsAsync(CancellationToken.None);
+            TimeSlotDefinitions = settings.TimeSlotDefinitions.ToList();
+            if (settings.Thresholds is not null &&
+                settings.Thresholds.Systolic is not null &&
+                settings.Thresholds.Diastolic is not null)
+            {
+                Thresholds = settings.Thresholds;
+            }
+        }
+        catch
+        {
+            // Keep default thresholds/time slots so readings can still be loaded.
+        }
+
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
         IsLoading = true;
-        var (fromUtc, toUtc) = BuildUtcRange(FilterFromDate, FilterToDate);
-        var results = await ReadApiClient.GetReadingsAsync(fromUtc, toUtc, CancellationToken.None);
-        ReadingItems = results.ToList();
-        IsLoading = false;
+        try
+        {
+            var (fromUtc, toUtc) = BuildUtcRange(FilterFromDate, FilterToDate);
+            var results = await ReadApiClient.GetReadingsAsync(fromUtc, toUtc, CancellationToken.None);
+            ReadingItems = results.ToList();
+
+        }
+        catch
+        {
+            ReadingItems = new List<ReadingResponse>();
+            InfoMessage = T("readings.error.load", "Impossibile caricare le rilevazioni. Riprova.");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private async Task ApplyDateFilterAsync()
@@ -866,41 +946,65 @@ else
         }
     }
 
-    private static string GetSeverityClass(Severity severity)
+    private static string GetClinicalBandClass(ClinicalBand band)
     {
-        return severity switch
+        return band switch
         {
-            Severity.Normal => "bg-success text-white",
-            Severity.VeryLow => "bg-danger text-white",
-            Severity.VeryHigh => "bg-danger text-white",
-            Severity.Low => "bg-warning text-dark",
-            Severity.High => "bg-warning text-dark",
+            ClinicalBand.VeryLow => "bg-danger text-white",
+            ClinicalBand.Low => "bg-warning text-dark",
+            ClinicalBand.NormalLow => "bg-primary text-white",
+            ClinicalBand.NormalOptimal => "bg-success text-white",
+            ClinicalBand.High => "bg-warning text-dark",
+            ClinicalBand.VeryHigh => "bg-danger text-white",
             _ => "bg-secondary text-white"
         };
     }
 
-    private static Severity ClassifyValue(int value, ThresholdSetDto thresholds)
+    private ThresholdSetDto GetSystolicThresholds()
+        => Thresholds?.Systolic ?? DefaultSystolicThresholds;
+
+    private ThresholdSetDto GetDiastolicThresholds()
+        => Thresholds?.Diastolic ?? DefaultDiastolicThresholds;
+
+    private ClinicalBand ClassifySystolicBand(int value)
+        => ClassifyBand(value, GetSystolicThresholds());
+
+    private ClinicalBand ClassifyDiastolicBand(int value)
+        => ClassifyBand(value, GetDiastolicThresholds());
+
+    private static ClinicalBand ClassifyBand(int value, ThresholdSetDto thresholds)
     {
-        if (value <= thresholds.VeryLowMax) return Severity.VeryLow;
-        if (value <= thresholds.LowMax) return Severity.Low;
-        if (value <= thresholds.NormalLowMax) return Severity.Normal;
-        if (value <= thresholds.NormalOptimalMax) return Severity.Normal;
-        if (value <= thresholds.WarningHighMax) return Severity.High;
-        if (value >= thresholds.VeryHighMin) return Severity.VeryHigh;
-        return Severity.High;
+        if (value <= thresholds.VeryLowMax) return ClinicalBand.VeryLow;
+        if (value <= thresholds.LowMax) return ClinicalBand.Low;
+        if (value <= thresholds.NormalLowMax) return ClinicalBand.NormalLow;
+        if (value <= thresholds.NormalOptimalMax) return ClinicalBand.NormalOptimal;
+        if (value <= thresholds.WarningHighMax) return ClinicalBand.High;
+        if (value >= thresholds.VeryHighMin) return ClinicalBand.VeryHigh;
+        return ClinicalBand.High;
     }
 
-    private string GetSeverityLabel(Severity severity)
+    private string GetClinicalBandLabel(ClinicalBand band)
     {
-        return severity switch
+        return band switch
         {
-            Severity.Normal => T("severity.normal", "Normale"),
-            Severity.VeryLow => T("severity.veryLow", "Molto bassa"),
-            Severity.VeryHigh => T("severity.veryHigh", "Molto alta"),
-            Severity.Low => T("severity.low", "Bassa"),
-            Severity.High => T("severity.high", "Alta"),
-            _ => severity.ToString()
+            ClinicalBand.VeryLow => T("settings.thresholds.veryLow", "PERICOLO BASSA"),
+            ClinicalBand.Low => T("settings.thresholds.low", "WARNING BASSA"),
+            ClinicalBand.NormalLow => T("settings.thresholds.normalLow", "NORMALE BASSA"),
+            ClinicalBand.NormalOptimal => T("settings.thresholds.normalOptimal", "NORMALE OTTIMALE"),
+            ClinicalBand.High => T("settings.thresholds.highWarning", "WARNING ALTA (borderline)"),
+            ClinicalBand.VeryHigh => T("settings.thresholds.veryHigh", "PERICOLO ALTA"),
+            _ => band.ToString()
         };
+    }
+
+    private enum ClinicalBand
+    {
+        VeryLow,
+        Low,
+        NormalLow,
+        NormalOptimal,
+        High,
+        VeryHigh
     }
 }
 

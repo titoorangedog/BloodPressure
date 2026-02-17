@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="BloodPressure.Mobile.MainPage">
+    <Grid RowDefinitions="Auto,*">
+        <Border BackgroundColor="#0B1117" StrokeThickness="0" Padding="10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                <Label Grid.Column="0"
+                       Text="{Binding CurrentUrl}"
+                       FontSize="12"
+                       TextColor="#9FB3C8"
+                       VerticalOptions="Center"
+                       LineBreakMode="TailTruncation" />
+                <Button Grid.Column="1"
+                        Text="Ricarica"
+                        Clicked="OnReloadClicked" />
+                <Button Grid.Column="2"
+                        Text="Apri"
+                        Clicked="OnOpenInBrowserClicked" />
+                <Button Grid.Column="3"
+                        Text="URL"
+                        Clicked="OnChangeUrlClicked" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <WebView x:Name="AppWebView"
+                     Navigating="OnWebViewNavigating"
+                     Navigated="OnWebViewNavigated" />
+
+            <Grid x:Name="BusyOverlay"
+                  IsVisible="False"
+                  BackgroundColor="#80000000">
+                <ActivityIndicator IsRunning="True"
+                                   Color="White"
+                                   WidthRequest="48"
+                                   HeightRequest="48"
+                                   HorizontalOptions="Center"
+                                   VerticalOptions="Center" />
+            </Grid>
+
+            <Grid x:Name="OfflineOverlay"
+                  IsVisible="False"
+                  BackgroundColor="#B3000000"
+                  Padding="24">
+                <VerticalStackLayout Spacing="12"
+                                     HorizontalOptions="Center"
+                                     VerticalOptions="Center">
+                    <Label Text="Connessione non disponibile"
+                           FontSize="18"
+                           TextColor="White"
+                           HorizontalTextAlignment="Center" />
+                    <Label Text="Verifica che la Web app sia raggiungibile e riprova."
+                           FontSize="13"
+                           TextColor="#D5DDE5"
+                           HorizontalTextAlignment="Center" />
+                    <Button Text="Riprova"
+                            Clicked="OnRetryClicked" />
+                </VerticalStackLayout>
+            </Grid>
+        </Grid>
+    </Grid>
+
+</ContentPage>
+

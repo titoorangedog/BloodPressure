@@ -421,6 +421,8 @@ static List<ImportReadingRow> ParseExcel(IFormFile file, List<string> errors)
         }
     }
 
+    AddExcelHeaderAliases(headerMap);
+
     var hasTimestamp = headerMap.ContainsKey(ReadingImportExportColumns.TimestampUtc);
     var hasDate = headerMap.ContainsKey(ReadingImportExportColumns.DateUtc);
     var hasTime = headerMap.ContainsKey(ReadingImportExportColumns.TimeUtc);
@@ -488,6 +490,29 @@ static List<ImportReadingRow> ParseExcel(IFormFile file, List<string> errors)
     }
 
     return rows;
+}
+
+static void AddExcelHeaderAliases(Dictionary<string, int> headerMap)
+{
+    static void MapAlias(Dictionary<string, int> map, string alias, string canonical)
+    {
+        if (!map.TryGetValue(alias, out var col))
+        {
+            return;
+        }
+
+        if (!map.ContainsKey(canonical))
+        {
+            map[canonical] = col;
+        }
+    }
+
+    // Support third-party exports with Italian column headers.
+    MapAlias(headerMap, "Giorno/Ora", ReadingImportExportColumns.TimestampUtc);
+    MapAlias(headerMap, "Sistolica", ReadingImportExportColumns.Systolic);
+    MapAlias(headerMap, "Diastolica", ReadingImportExportColumns.Diastolic);
+    MapAlias(headerMap, "Pulsazioni", ReadingImportExportColumns.HeartRate);
+    MapAlias(headerMap, "Peso [kg]", ReadingImportExportColumns.WeightKg);
 }
 
 static List<ImportReadingRow> ParseXml(IFormFile file, List<string> errors)

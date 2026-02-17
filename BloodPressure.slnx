@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Android/Android.csproj" />
     <Project Path="src/BloodPressure.AuthService/BloodPressure.AuthService.csproj" />
     <Project Path="src/BloodPressure.Persistence/BloodPressure.Persistence.csproj" />
     <Project Path="src/BloodPressure.ReadService/BloodPressure.ReadService.csproj" />
